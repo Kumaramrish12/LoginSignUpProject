@@ -1,0 +1,40 @@
+<div class="signup-container">
+
+  <h2>Signup Page</h2>
+
+  First Name:
+  <input [(ngModel)]="FirstName" name="FirstName">
+
+  <br><br>
+
+  Last Name:
+  <input [(ngModel)]="LastName" name="LastName">
+
+  <br><br>
+
+  Email:
+  <input [(ngModel)]="Email" name="Email">
+
+  <br><br>
+
+  Password:
+  <input type="password" [(ngModel)]="Password" name="Password">
+
+  <br><br>
+
+  Confirm Password:
+  <input type="password" [(ngModel)]="ConfirmPassword" name="ConfirmPassword">
+
+  <br><br>
+
+  Select Role:
+  <select [(ngModel)]="Role" name="Role">
+    <option value="User">User</option>
+    <option value="Admin">Admin</option>
+  </select>
+
+  <br><br>
+
+  <button (click)="signup()">Signup</button>
+
+</div>

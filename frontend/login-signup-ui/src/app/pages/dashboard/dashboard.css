@@ -1,0 +1,55 @@
+.chat-container {
+
+max-width: 700px;
+
+margin: auto;
+
+}
+
+.message-card {
+
+padding: 10px;
+
+margin: 10px;
+
+border-radius: 10px;
+
+width: 60%;
+
+box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+
+}
+
+.sent {
+
+background: #d1e7dd;
+
+margin-left: auto;
+
+text-align: right;
+
+}
+
+.received {
+
+background: #f8d7da;
+
+margin-right: auto;
+
+text-align: left;
+
+}
+
+table {
+
+width: 100%;
+
+border-collapse: collapse;
+
+}
+
+th, td {
+
+padding: 8px;
+
+}

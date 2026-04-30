@@ -1,0 +1,101 @@
+<h2>Admin Dashboard</h2>
+
+<div class="tabs">
+
+<button (click)="setTab('A')">Tab A - Approvals</button>
+
+<button (click)="setTab('B')">Tab B - Notice Board</button>
+
+<button (click)="setTab('C')">Tab C - Analytics</button>
+
+</div>
+
+<hr>
+
+
+<!-- TAB A APPROVAL SECTION -->
+
+<div *ngIf="activeTab === 'A'">
+
+<h3>Pending User Approvals</h3>
+
+<table border="1">
+
+<tr>
+<th>Name</th>
+<th>Email</th>
+<th>Role</th>
+<th>Action</th>
+</tr>
+
+<tr *ngFor="let user of pendingUsers">
+
+<td>{{user.FirstName}} {{user.LastName}}</td>
+
+<td>{{user.Email}}</td>
+
+<td>{{user.Role}}</td>
+
+<td>
+
+<button (click)="approveUser(user)">
+Approve
+</button>
+
+<button (click)="rejectUser(user)">
+Reject
+</button>
+
+</td>
+
+</tr>
+
+</table>
+
+<div *ngIf="pendingUsers.length === 0">
+No pending approvals
+</div>
+
+</div>
+
+
+<!-- TAB B NOTICE BOARD -->
+
+<div *ngIf="activeTab === 'B'">
+
+<h3>Send Notice</h3>
+
+<input
+placeholder="Enter notice"
+[(ngModel)]="noticeMessage"
+/>
+
+<select [(ngModel)]="selectedUser">
+
+<option *ngFor="let u of users">
+{{u}}
+</option>
+
+</select>
+
+<button (click)="sendNotice()">
+Send
+</button>
+
+</div>
+
+
+<!-- TAB C ANALYTICS -->
+
+<div *ngIf="activeTab === 'C'">
+
+<h3>Analytics Graph</h3>
+
+<canvas id="adminChart"></canvas>
+
+</div>
+
+
+<hr>
+
+<button (click)="logout()">Logout</button>

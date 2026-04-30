@@ -1,0 +1,38 @@
+<h2>Pending User Approvals</h2>
+
+<table *ngIf="pendingUsers.length > 0" border="1">
+
+  <tr>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Role</th>
+    <th>Action</th>
+  </tr>
+
+  <tr *ngFor="let user of pendingUsers">
+
+    <td>
+      {{ user.FirstName }} {{ user.LastName }}
+    </td>
+
+    <td>
+      {{ user.Email }}
+    </td>
+
+    <td>
+      {{ user.Role }}
+    </td>
+
+    <td>
+      <button (click)="approveUser(user)">
+        Approve
+      </button>
+    </td>
+
+  </tr>
+
+</table>
+
+<div *ngIf="pendingUsers.length === 0">
+  No pending users found
+</div>
