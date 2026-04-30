@@ -2,82 +2,88 @@ using Microsoft.AspNetCore.Mvc;
 using LoginSignupAPI.Services;
 using System.Text.Json;
 
-namespace LoginSignupAPI.Controllers;
-
-[ApiController]
-[Route("api/auth")]
-public class AuthController : ControllerBase
+namespace LoginSignupAPI.Controllers
 {
-    private readonly CouchDbService _couchDbService;
-
-    public AuthController(CouchDbService couchDbService)
+    [ApiController]
+    [Route("api/auth")]
+    public class AuthController : ControllerBase
     {
-        _couchDbService = couchDbService;
-    }
+        private readonly CouchDbService _couchDbService;
 
-    // ================= REGISTER =================
-
-    [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] JsonElement user)
-    {
-        try
+        public AuthController(CouchDbService couchDbService)
         {
-            var newUser = new
+            _couchDbService = couchDbService;
+        }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] JsonElement data)
+        {
+            Console.WriteLine("LOGIN API HIT");
+
+            string email = "";
+            string password = "";
+
+            if (data.TryGetProperty("Email", out var e1))
+                email = e1.GetString();
+
+            if (data.TryGetProperty("email", out var e2))
+                email = e2.GetString();
+
+            if (data.TryGetProperty("Password", out var p1))
+                password = p1.GetString();
+
+            if (data.TryGetProperty("password", out var p2))
+                password = p2.GetString();
+
+            Console.WriteLine($"EMAIL RECEIVED: {email}");
+            Console.WriteLine($"PASSWORD RECEIVED: {password}");
+
+            var users = await _couchDbService.GetAllUsersAsync();
+
+            Console.WriteLine($"TOTAL USERS FOUND: {users.Count}");
+
+            foreach (var user in users)
             {
-                FirstName = user.GetProperty("FirstName").GetString(),
-                LastName = user.GetProperty("LastName").GetString(),
-                Email = user.GetProperty("Email").GetString(),
-                Password = user.GetProperty("Password").GetString(),
-                Role = user.GetProperty("Role").GetString(),
-                IsApproved = false
-            };
+                // Skip invalid docs safely
+                if (!user.TryGetProperty("Email", out var dbEmailProp))
+                    continue;
 
-            var created = await _couchDbService.CreateUserAsync(newUser);
+                if (!user.TryGetProperty("Password", out var dbPasswordProp))
+                    continue;
 
-            if (!created)
-                return StatusCode(500, new { message = "User creation failed" });
+                if (!user.TryGetProperty("IsApproved", out var approvedProp))
+                    continue;
 
-            return Ok(new { message = "User registered successfully" });
-        }
-        catch
-        {
-            return StatusCode(500, new { message = "Registration error" });
-        }
-    }
+                if (!user.TryGetProperty("Role", out var roleProp))
+                    continue;
 
+                var dbEmail = dbEmailProp.GetString();
+                var dbPassword = dbPasswordProp.GetString();
+                var approved = approvedProp.GetBoolean();
 
-    // ================= LOGIN =================
+                Console.WriteLine($"CHECKING USER: {dbEmail}");
 
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] JsonElement loginData)
-    {
-        try
-        {
-            var email = loginData.GetProperty("Email").GetString();
-            var password = loginData.GetProperty("Password").GetString();
+                if (dbEmail == email && dbPassword == password)
+                {
+                    if (!approved)
+                    {
+                        Console.WriteLine("USER NOT APPROVED");
+                        return Unauthorized("Approval pending");
+                    }
 
-            var user = await _couchDbService.GetUserByEmailAsync(email);
+                    Console.WriteLine("LOGIN SUCCESS");
 
-            if (user == null)
-                return Unauthorized(new { message = "Invalid credentials" });
+                    return Ok(new
+                    {
+                        email = dbEmail,
+                        role = roleProp.GetString()
+                    });
+                }
+            }
 
-            if (user.Value.GetProperty("Password").GetString() != password)
-                return Unauthorized(new { message = "Invalid credentials" });
+            Console.WriteLine("NO MATCH FOUND");
 
-            if (!user.Value.GetProperty("IsApproved").GetBoolean())
-                return Unauthorized(new { message = "User not approved yet" });
-
-            var role = user.Value.GetProperty("Role").GetString();
-
-            return Ok(new
-            {
-                token = "dummy-token",
-                role = role
-            });
-        }
-        catch
-        {
-            return StatusCode(500, new { message = "Login error" });
+            return Unauthorized("Invalid credentials");
         }
     }
 }

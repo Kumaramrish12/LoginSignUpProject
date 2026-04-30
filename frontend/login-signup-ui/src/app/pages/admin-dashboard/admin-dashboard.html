@@ -1,19 +1,12 @@
 <h2>Admin Dashboard</h2>
 
-<div class="tabs">
-
 <button (click)="setTab('A')">Tab A - Approvals</button>
-
 <button (click)="setTab('B')">Tab B - Notice Board</button>
-
 <button (click)="setTab('C')">Tab C - Analytics</button>
-
-</div>
 
 <hr>
 
-
-<!-- TAB A APPROVAL SECTION -->
+<!-- TAB A APPROVAL TABLE -->
 
 <div *ngIf="activeTab === 'A'">
 
@@ -53,7 +46,9 @@ Reject
 </table>
 
 <div *ngIf="pendingUsers.length === 0">
-No pending approvals
+
+No pending approvals found
+
 </div>
 
 </div>
@@ -66,20 +61,24 @@ No pending approvals
 <h3>Send Notice</h3>
 
 <input
-placeholder="Enter notice"
+placeholder="Enter message"
 [(ngModel)]="noticeMessage"
 />
 
 <select [(ngModel)]="selectedUser">
 
 <option *ngFor="let u of users">
+
 {{u}}
+
 </option>
 
 </select>
 
 <button (click)="sendNotice()">
+
 Send
+
 </button>
 
 </div>
@@ -89,7 +88,7 @@ Send
 
 <div *ngIf="activeTab === 'C'">
 
-<h3>Analytics Graph</h3>
+<h3>Analytics Chart</h3>
 
 <canvas id="adminChart"></canvas>
 

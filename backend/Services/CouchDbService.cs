@@ -1,6 +1,6 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Net.Http.Headers;
 
 namespace LoginSignupAPI.Services
 {
@@ -8,8 +8,12 @@ namespace LoginSignupAPI.Services
     {
         private readonly HttpClient _httpClient;
 
-        private readonly string baseUrl =
+        // CHANGE THESE IF DIFFERENT
+        private readonly string _dbUrl =
             "http://localhost:5984/usersdb";
+
+        private readonly string _username = "admin";
+        private readonly string _password = "admin123";
 
         public CouchDbService(HttpClient httpClient)
         {
@@ -17,27 +21,32 @@ namespace LoginSignupAPI.Services
 
             var authToken =
                 Convert.ToBase64String(
-                    Encoding.ASCII.GetBytes("admin:admin123")
+                    Encoding.ASCII.GetBytes(
+                        $"{_username}:{_password}"
+                    )
                 );
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Basic", authToken);
         }
 
+
         // ================= CREATE USER =================
 
         public async Task<bool> CreateUserAsync(object user)
         {
-            var json = JsonSerializer.Serialize(user);
+            var json =
+                JsonSerializer.Serialize(user);
 
-            var content = new StringContent(
-                json,
-                Encoding.UTF8,
-                "application/json"
-            );
+            var content =
+                new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json"
+                );
 
             var response =
-                await _httpClient.PostAsync(baseUrl, content);
+                await _httpClient.PostAsync(_dbUrl, content);
 
             return response.IsSuccessStatusCode;
         }
@@ -47,82 +56,59 @@ namespace LoginSignupAPI.Services
 
         public async Task<JsonElement?> GetUserByEmailAsync(string email)
         {
-            var response =
-                await _httpClient.GetAsync(
-                    $"{baseUrl}/_all_docs?include_docs=true"
-                );
+            var users = await GetAllUsersAsync();
 
-            if (!response.IsSuccessStatusCode)
-                return null;
-
-            var json =
-                await response.Content.ReadAsStringAsync();
-
-            var document =
-                JsonDocument.Parse(json);
-
-            foreach (var row in document.RootElement
-                                       .GetProperty("rows")
-                                       .EnumerateArray())
+            foreach (var user in users)
             {
-                if (!row.TryGetProperty("doc",
-                    out JsonElement doc))
-                    continue;
-
-                if (!doc.TryGetProperty("Email",
-                    out JsonElement emailField))
-                    continue;
-
-                if (emailField.GetString() == email)
-                    return doc;
+                if (
+                    user.GetProperty("Email")
+                        .GetString()
+                        ?.ToLower()
+                    ==
+                    email.ToLower()
+                )
+                {
+                    return user;
+                }
             }
 
             return null;
         }
 
 
-        // ================= GET PENDING USERS =================
+        // ================= GET ALL USERS =================
 
-        public async Task<List<JsonElement>> GetPendingUsersAsync()
+        public async Task<List<JsonElement>> GetAllUsersAsync()
         {
             var response =
                 await _httpClient.GetAsync(
-                    $"{baseUrl}/_all_docs?include_docs=true"
+                    $"{_dbUrl}/_all_docs?include_docs=true"
                 );
 
-            var result =
-                new List<JsonElement>();
-
             if (!response.IsSuccessStatusCode)
-                return result;
-
-            var json =
-                await response.Content.ReadAsStringAsync();
-
-            var document =
-                JsonDocument.Parse(json);
-
-            foreach (var row in document.RootElement
-                                       .GetProperty("rows")
-                                       .EnumerateArray())
             {
-                if (!row.TryGetProperty("doc",
-                    out JsonElement doc))
-                    continue;
-
-                if (!doc.TryGetProperty("IsApproved",
-                    out JsonElement approved))
-                    continue;
-
-                if (!approved.GetBoolean())
-                    result.Add(doc);
+                throw new Exception(
+                    $"CouchDB error: {response.StatusCode}"
+                );
             }
 
-            return result;
+            var content =
+                await response.Content.ReadAsStringAsync();
+
+            var json =
+                JsonDocument.Parse(content);
+
+            var rows =
+                json.RootElement.GetProperty("rows");
+
+            return rows
+                .EnumerateArray()
+                .Select(r => r.GetProperty("doc"))
+                .ToList();
         }
 
 
-        // ================= UPDATE USER (APPROVAL) =================
+        // ================= UPDATE USER =================
 
         public async Task<bool> UpdateUserAsync(
             string id,
@@ -142,7 +128,7 @@ namespace LoginSignupAPI.Services
 
             var response =
                 await _httpClient.PutAsync(
-                    $"{baseUrl}/{id}?rev={rev}",
+                    $"{_dbUrl}/{id}?rev={rev}",
                     content
                 );
 
@@ -150,39 +136,19 @@ namespace LoginSignupAPI.Services
         }
 
 
-        // ================= GET ALL USERS =================
+        // ================= DELETE USER =================
 
-        public async Task<List<JsonElement>> GetAllUsersAsync()
+        public async Task<bool> DeleteUserAsync(
+            string id,
+            string rev
+        )
         {
             var response =
-                await _httpClient.GetAsync(
-                    $"{baseUrl}/_all_docs?include_docs=true"
+                await _httpClient.DeleteAsync(
+                    $"{_dbUrl}/{id}?rev={rev}"
                 );
 
-            var result =
-                new List<JsonElement>();
-
-            if (!response.IsSuccessStatusCode)
-                return result;
-
-            var json =
-                await response.Content.ReadAsStringAsync();
-
-            var document =
-                JsonDocument.Parse(json);
-
-            foreach (var row in document.RootElement
-                                       .GetProperty("rows")
-                                       .EnumerateArray())
-            {
-                if (!row.TryGetProperty("doc",
-                    out JsonElement doc))
-                    continue;
-
-                result.Add(doc);
-            }
-
-            return result;
+            return response.IsSuccessStatusCode;
         }
     }
 }

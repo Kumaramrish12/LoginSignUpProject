@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -11,77 +11,43 @@ import { AuthService } from '../../core/services/auth';
   templateUrl: './login.html',
   styleUrls: ['./login.css']
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent {
 
-  email = '';
-  password = '';
+  Email = '';
+  Password = '';
 
   constructor(
     private authService: AuthService,
     private router: Router
   ) {}
 
-  ngOnInit() {
-
-    // remove stale session if browser restarted
-    if (!sessionStorage.getItem('activeTab')) {
-      localStorage.removeItem('activeSession');
-    }
-
-    // auto-clean session when tab closes
-    window.addEventListener('beforeunload', () => {
-      localStorage.removeItem('activeSession');
-    });
-
-  }
-
   login() {
 
-    // block login if already active elsewhere
-    if (localStorage.getItem('activeSession')) {
-
-      alert('User already logged in another tab ⚠️');
-
-      return;
-    }
-
-    const loginData = {
-      Email: this.email,
-      Password: this.password
+    const body = {
+      email: this.Email,
+      Password: this.Password
     };
 
-    this.authService.login(loginData).subscribe({
+    console.log("LOGIN REQUEST:", body);
+
+    this.authService.login(body).subscribe({
 
       next: (res: any) => {
 
-        if (!res || !res.role) {
+        console.log("LOGIN RESPONSE:", res);
 
-          alert('Login failed');
-
-          return;
-        }
-
-        // store session flags
-        localStorage.setItem('activeSession', 'true');
-        sessionStorage.setItem('activeTab', 'true');
-
-        localStorage.setItem('email', this.email);
+        localStorage.setItem('email', res.email);
         localStorage.setItem('role', res.role);
 
-        // role routing
-        if (res.role === 'Admin') {
-
+        if (res.role === 'Admin')
           this.router.navigate(['/admin-dashboard']);
-
-        } else {
-
+        else
           this.router.navigate(['/dashboard']);
-
-        }
-
       },
 
-      error: () => {
+      error: err => {
+
+        console.log("LOGIN ERROR:", err);
 
         alert('Invalid credentials or approval pending');
 

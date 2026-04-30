@@ -39,7 +39,7 @@ export class AdminDashboardComponent implements OnInit {
 
     this.loadPendingUsers();
 
-    // auto-refresh pending users every 5 seconds
+    // auto refresh every 5 seconds
     setInterval(() => this.loadPendingUsers(), 5000);
 
   }
@@ -62,7 +62,7 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
-  // SESSION TIMEOUT FOR TAB A
+  // SESSION TIMEOUT (TAB A)
 
   startSessionTimeout() {
 
@@ -78,7 +78,8 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
-  // LOAD PENDING USERS FROM BACKEND
+
+  // LOAD ONLY PENDING USERS
 
   loadPendingUsers() {
 
@@ -88,7 +89,10 @@ export class AdminDashboardComponent implements OnInit {
 
         next: (data) => {
 
-          this.pendingUsers = data;
+          // filter only IsApproved = false users
+          this.pendingUsers = data.filter(
+            user => user.IsApproved === false
+          );
 
         },
 
@@ -102,9 +106,18 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
+
   // APPROVE USER
 
   approveUser(user: any) {
+
+    if (!user._id || !user._rev) {
+
+      alert('User ID or revision missing');
+
+      return;
+
+    }
 
     this.http
       .put(
@@ -115,7 +128,7 @@ export class AdminDashboardComponent implements OnInit {
 
         next: () => {
 
-          alert('User Approved');
+          alert('User approved successfully');
 
           this.loadPendingUsers();
 
@@ -131,13 +144,43 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
-  // ✅ FIX ADDED HERE — REJECT USER FUNCTION
+
+  // REJECT USER
 
   rejectUser(user: any) {
 
-    alert('Reject feature can be implemented if required by backend');
+    if (!user._id || !user._rev) {
+
+      alert('User ID or revision missing');
+
+      return;
+
+    }
+
+    this.http
+      .delete(
+        `http://localhost:5000/api/admin/delete-user/${user._id}?rev=${user._rev}`
+      )
+      .subscribe({
+
+        next: () => {
+
+          alert('User rejected');
+
+          this.loadPendingUsers();
+
+        },
+
+        error: () => {
+
+          alert('Reject failed');
+
+        }
+
+      });
 
   }
+
 
   // SEND NOTICE
 
@@ -168,6 +211,7 @@ export class AdminDashboardComponent implements OnInit {
     this.noticeMessage = '';
 
   }
+
 
   // ANALYTICS GRAPH
 
@@ -211,6 +255,7 @@ export class AdminDashboardComponent implements OnInit {
     });
 
   }
+
 
   // LOGOUT
 
