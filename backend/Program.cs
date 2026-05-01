@@ -1,21 +1,38 @@
 using LoginSignupAPI.Services;
+using LoginSignupAPI.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Show detailed errors in terminal
+// Logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
-// Add services
+
+// ================= POSTGRESQL (TAB B ONLY) =================
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection")
+    )
+);
+
+
+// ================= COUCHDB (TAB A + TAB C) =================
+
+builder.Services.AddHttpClient<CouchDbService>();
+
+
+// ================= CONTROLLERS =================
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register CouchDB service
-builder.Services.AddHttpClient<CouchDbService>();
 
-// Enable CORS (Angular fix)
+// ================= CORS =================
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular",
@@ -27,13 +44,12 @@ builder.Services.AddCors(options =>
         });
 });
 
+
 var app = builder.Build();
 
-// Enable Swagger
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Enable CORS
 app.UseCors("AllowAngular");
 
 app.UseAuthorization();

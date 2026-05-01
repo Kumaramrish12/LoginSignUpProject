@@ -15,6 +15,7 @@ namespace LoginSignupAPI.Controllers
             _context = context;
         }
 
+
         // ================= SEND MESSAGE =================
 
         [HttpPost("send")]
@@ -25,13 +26,23 @@ namespace LoginSignupAPI.Controllers
                 if (message == null)
                     return BadRequest("Invalid message");
 
-                // handle broadcast case
-                if (message.ReceiverEmail == "all")
+                // Ignore client-provided ID (EF auto-generates it)
+                message.Id = 0;
+
+                // Always set timestamp from server
+                message.Timestamp = DateTime.UtcNow;
+
+
+                // ================= BROADCAST SUPPORT =================
+
+                if (!string.IsNullOrEmpty(message.ReceiverEmail) &&
+                    message.ReceiverEmail.ToLower() == "all")
                 {
                     var users = new List<string>
                     {
                         "rahul@test.com",
-                        "admin@test.com"
+                        "admin@test.com",
+                        "royamrish.18@gmail.com"
                     };
 
                     foreach (var user in users)
@@ -49,9 +60,9 @@ namespace LoginSignupAPI.Controllers
                 }
                 else
                 {
-                    message.Timestamp = DateTime.UtcNow;
                     _context.Messages.Add(message);
                 }
+
 
                 await _context.SaveChangesAsync();
 
@@ -59,7 +70,10 @@ namespace LoginSignupAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(
+                    500,
+                    ex.InnerException?.Message ?? ex.Message
+                );
             }
         }
 
@@ -69,11 +83,21 @@ namespace LoginSignupAPI.Controllers
         [HttpGet("messages")]
         public IActionResult GetMessages()
         {
-            var messages = _context.Messages
-                                   .OrderByDescending(m => m.Timestamp)
-                                   .ToList();
+            try
+            {
+                var messages = _context.Messages
+                    .OrderByDescending(m => m.Timestamp)
+                    .ToList();
 
-            return Ok(messages);
+                return Ok(messages);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    ex.InnerException?.Message ?? ex.Message
+                );
+            }
         }
     }
 }

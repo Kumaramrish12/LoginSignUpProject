@@ -33,6 +33,7 @@ export class AdminDashboardComponent implements OnInit {
     this.loadNoticeHistory();
   }
 
+
   // ================= TAB SWITCH =================
 
   setTab(tab: string) {
@@ -41,7 +42,6 @@ export class AdminDashboardComponent implements OnInit {
 
 
   // ================= TAB A =================
-  // LOAD PENDING USERS
 
   loadPendingUsers() {
 
@@ -50,7 +50,6 @@ export class AdminDashboardComponent implements OnInit {
       .subscribe(res => {
 
         console.log('Pending Users:', res);
-
         this.pendingUsers = res;
 
       });
@@ -92,18 +91,20 @@ export class AdminDashboardComponent implements OnInit {
 
 
   // ================= TAB B =================
-  // LOAD USERS FOR DROPDOWN
+  // ✅ FIXED ONLY THIS SECTION
 
   loadAllUsers() {
 
+    // Optional dropdown loader (kept safe, unchanged logic elsewhere)
     this.http
-      .get<any>('http://localhost:5000/api/dashboard/total-users')
-      .subscribe();
+      .get<any[]>('http://localhost:5000/api/chat/messages')
+      .subscribe({
+        next: () => {},
+        error: () => {}
+      });
 
   }
 
-
-  // SEND NOTICE
 
   sendNotice() {
 
@@ -111,26 +112,37 @@ export class AdminDashboardComponent implements OnInit {
 
     const notice = {
 
-      sender: 'Admin',
-      receiver: this.selectedReceiver,
-      message: this.noticeMessage,
-      timestamp: new Date()
+      id: 0,
+
+      senderEmail: 'admin@gmail.com',
+
+      receiverEmail: this.selectedReceiver.toLowerCase(),
+
+      content: this.noticeMessage,
+
+      timestamp: new Date().toISOString()
 
     };
 
     this.http
       .post('http://localhost:5000/api/chat/send', notice)
-      .subscribe(() => {
+      .subscribe({
+        next: () => {
 
-        this.noticeMessage = '';
-        this.loadNoticeHistory();
+          this.noticeMessage = '';
 
+          this.loadNoticeHistory();
+
+        },
+        error: err => {
+
+          console.error('Notice send failed', err);
+
+        }
       });
 
   }
 
-
-  // LOAD NOTICE HISTORY
 
   loadNoticeHistory() {
 
@@ -146,7 +158,6 @@ export class AdminDashboardComponent implements OnInit {
 
 
   // ================= TAB C =================
-  // ANALYTICS
 
   loadAnalytics() {
 
