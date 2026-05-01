@@ -6,9 +6,9 @@
 
 <hr>
 
-<!-- TAB A APPROVAL TABLE -->
+<!-- ================= TAB A ================= -->
 
-<div *ngIf="activeTab === 'A'">
+<div *ngIf="activeTab==='A'">
 
 <h3>Pending User Approvals</h3>
 
@@ -24,20 +24,14 @@
 <tr *ngFor="let user of pendingUsers">
 
 <td>{{user.FirstName}} {{user.LastName}}</td>
-
 <td>{{user.Email}}</td>
-
 <td>{{user.Role}}</td>
 
 <td>
 
-<button (click)="approveUser(user)">
-Approve
-</button>
+<button (click)="approveUser(user)">Approve</button>
 
-<button (click)="rejectUser(user)">
-Reject
-</button>
+<button (click)="rejectUser(user)">Reject</button>
 
 </td>
 
@@ -45,29 +39,23 @@ Reject
 
 </table>
 
-<div *ngIf="pendingUsers.length === 0">
-
-No pending approvals found
-
 </div>
 
-</div>
+<!-- ================= TAB B ================= -->
 
-
-<!-- TAB B NOTICE BOARD -->
-
-<div *ngIf="activeTab === 'B'">
+<div *ngIf="activeTab==='B'">
 
 <h3>Send Notice</h3>
 
-<input
-placeholder="Enter message"
-[(ngModel)]="noticeMessage"
-/>
+<input [(ngModel)]="noticeText">
 
-<select [(ngModel)]="selectedUser">
+<br><br>
 
-<option *ngFor="let u of users">
+<select [(ngModel)]="selectedReceiver">
+
+<option>All Users</option>
+
+<option *ngFor="let u of allUsers">
 
 {{u}}
 
@@ -75,25 +63,61 @@ placeholder="Enter message"
 
 </select>
 
-<button (click)="sendNotice()">
+<br><br>
 
-Send
+<button (click)="sendNotice()">Send Notice</button>
 
-</button>
+<hr>
+
+<h3>Message History</h3>
+
+<table border="1">
+
+<tr>
+<th>Sender</th>
+<th>Receiver</th>
+<th>Message</th>
+<th>Time</th>
+</tr>
+
+<tr *ngFor="let n of noticeHistory">
+
+<td>{{n.sender}}</td>
+<td>{{n.receiver}}</td>
+<td>{{n.message}}</td>
+<td>{{n.timestamp}}</td>
+
+</tr>
+
+</table>
 
 </div>
 
+<!-- ================= TAB C ================= -->
 
-<!-- TAB C ANALYTICS -->
+<div *ngIf="activeTab==='C'">
 
-<div *ngIf="activeTab === 'C'">
+<h3>Dashboard Analytics</h3>
 
-<h3>Analytics Chart</h3>
+<canvas id="analyticsChart"></canvas>
 
-<canvas id="adminChart"></canvas>
+<br><br>
+
+<table border="1">
+
+<tr>
+<th>Total Admins</th>
+<th>Total Users</th>
+</tr>
+
+<tr>
+<td>{{totalAdmins}}</td>
+<td>{{totalUsers}}</td>
+</tr>
+
+</table>
 
 </div>
-
 
 <hr>
 

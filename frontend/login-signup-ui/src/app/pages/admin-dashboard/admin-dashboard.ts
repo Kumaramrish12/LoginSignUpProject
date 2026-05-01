@@ -1,14 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import Chart from 'chart.js/auto';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, CommonModule],
   templateUrl: './admin-dashboard.html',
   styleUrls: ['./admin-dashboard.css']
 })
@@ -17,257 +16,130 @@ export class AdminDashboardComponent implements OnInit {
   activeTab = 'A';
 
   pendingUsers: any[] = [];
+  allUsers: string[] = [];
 
-  noticeMessage = '';
-
-  selectedUser = 'All Users';
-
-  users: string[] = ['All Users', 'Admin', 'User'];
-
-  notices: any[] = [];
+  noticeText = '';
+  selectedReceiver = 'All Users';
+  noticeHistory: any[] = [];
 
   chart: any;
+  totalAdmins = 0;
+  totalUsers = 0;
 
-  timeoutHandle: any;
-
-  constructor(
-    private http: HttpClient,
-    private router: Router
-  ) {}
+  constructor(private http: HttpClient) {}
 
   ngOnInit() {
-
     this.loadPendingUsers();
-
-    // auto refresh every 5 seconds
-    setInterval(() => this.loadPendingUsers(), 5000);
-
+    this.loadUsers();
+    this.loadNotices();
+    this.loadAnalytics();
   }
 
   setTab(tab: string) {
-
     this.activeTab = tab;
 
-    if (tab === 'A') {
-
-      this.startSessionTimeout();
-
-    }
-
     if (tab === 'C') {
-
-      setTimeout(() => this.loadChart(), 200);
-
+      setTimeout(() => this.renderChart(), 200);
     }
-
   }
 
-  // SESSION TIMEOUT (TAB A)
-
-  startSessionTimeout() {
-
-    clearTimeout(this.timeoutHandle);
-
-    this.timeoutHandle = setTimeout(() => {
-
-      alert('Session expired (Admin Tab A)');
-
-      this.logout();
-
-    }, 20000);
-
+  logout() {
+    localStorage.clear();
+    window.location.href = '/login';
   }
 
-
-  // LOAD ONLY PENDING USERS
+  // TAB A
 
   loadPendingUsers() {
-
-    this.http
-      .get<any[]>('http://localhost:5000/api/admin/pending-users')
-      .subscribe({
-
-        next: (data) => {
-
-          // filter only IsApproved = false users
-          this.pendingUsers = data.filter(
-            user => user.IsApproved === false
-          );
-
-        },
-
-        error: () => {
-
-          console.error('Failed to load pending users');
-
-        }
-
-      });
-
+    this.http.get<any[]>('http://localhost:5000/api/admin/pending-users')
+      .subscribe(res => this.pendingUsers = res);
   }
-
-
-  // APPROVE USER
 
   approveUser(user: any) {
-
-    if (!user._id || !user._rev) {
-
-      alert('User ID or revision missing');
-
-      return;
-
-    }
-
-    this.http
-      .put(
-        `http://localhost:5000/api/admin/approve-user/${user._id}?rev=${user._rev}`,
-        {}
-      )
-      .subscribe({
-
-        next: () => {
-
-          alert('User approved successfully');
-
-          this.loadPendingUsers();
-
-        },
-
-        error: () => {
-
-          alert('Approval failed');
-
-        }
-
-      });
-
+    this.http.put(
+      `http://localhost:5000/api/admin/approve-user/${user._id}?rev=${user._rev}`,
+      {}
+    ).subscribe(() => this.loadPendingUsers());
   }
-
-
-  // REJECT USER
 
   rejectUser(user: any) {
-
-    if (!user._id || !user._rev) {
-
-      alert('User ID or revision missing');
-
-      return;
-
-    }
-
-    this.http
-      .delete(
-        `http://localhost:5000/api/admin/delete-user/${user._id}?rev=${user._rev}`
-      )
-      .subscribe({
-
-        next: () => {
-
-          alert('User rejected');
-
-          this.loadPendingUsers();
-
-        },
-
-        error: () => {
-
-          alert('Reject failed');
-
-        }
-
-      });
-
+    this.http.delete(
+      `http://localhost:5000/api/admin/reject-user/${user._id}?rev=${user._rev}`
+    ).subscribe(() => this.loadPendingUsers());
   }
 
+  // TAB B
 
-  // SEND NOTICE
+  loadUsers() {
+    this.http.get<string[]>('http://localhost:5000/api/admin/user-emails')
+      .subscribe(res => this.allUsers = res);
+  }
 
   sendNotice() {
 
-    if (!this.noticeMessage.trim()) {
+    if (!this.noticeText) return;
 
-      alert('Message cannot be empty');
-
-      return;
-
-    }
-
-    const notice = {
-
-      senderEmail: localStorage.getItem('email'),
-
-      receiverGroup: this.selectedUser,
-
-      content: this.noticeMessage,
-
+    const payload = {
+      sender: localStorage.getItem('email'),
+      receiver: this.selectedReceiver,
+      message: this.noticeText,
       timestamp: new Date()
-
     };
 
-    this.notices.push(notice);
+    this.http.post('http://localhost:5000/api/notice/send', payload)
+      .subscribe(() => {
 
-    this.noticeMessage = '';
+        this.noticeText = '';
+        this.loadNotices();
+
+      });
 
   }
 
+  loadNotices() {
+    this.http.get<any[]>('http://localhost:5000/api/notice/history')
+      .subscribe(res => this.noticeHistory = res);
+  }
 
-  // ANALYTICS GRAPH
+  // TAB C
 
-  loadChart() {
+  loadAnalytics() {
+    this.http.get<any[]>('http://localhost:5000/api/admin/user-stats')
+      .subscribe(res => {
+
+        this.totalAdmins =
+          res.filter(x => x.Role === 'Admin').length;
+
+        this.totalUsers =
+          res.filter(x => x.Role === 'User').length;
+
+        this.renderChart();
+
+      });
+  }
+
+  renderChart() {
 
     const canvas =
-      document.getElementById('adminChart') as HTMLCanvasElement | null;
+      document.getElementById('analyticsChart') as HTMLCanvasElement;
 
     if (!canvas) return;
 
     if (this.chart) this.chart.destroy();
 
-    const ctx = canvas.getContext('2d');
+    this.chart = new Chart(canvas, {
 
-    if (!ctx) return;
-
-    this.chart = new Chart(ctx, {
-
-      type: 'pie',
+      type: 'bar',
 
       data: {
-
-        labels: [
-          'Approved Users',
-          'Pending Users',
-          'Messages Sent'
-        ],
-
-        datasets: [
-          {
-            data: [
-              12,
-              this.pendingUsers.length,
-              this.notices.length
-            ]
-          }
-        ]
-
+        labels: ['Admins', 'Users'],
+        datasets: [{
+          label: 'User Statistics',
+          data: [this.totalAdmins, this.totalUsers]
+        }]
       }
 
     });
-
-  }
-
-
-  // LOGOUT
-
-  logout() {
-
-    localStorage.removeItem('activeSession');
-
-    sessionStorage.removeItem('activeTab');
-
-    localStorage.clear();
-
-    this.router.navigate(['/login']);
 
   }
 

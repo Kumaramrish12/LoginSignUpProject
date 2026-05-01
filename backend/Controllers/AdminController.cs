@@ -15,7 +15,8 @@ namespace LoginSignupAPI.Controllers
             _couchDbService = couchDbService;
         }
 
-        // ================= GET ALL PENDING USERS =================
+
+        // ================= GET PENDING USERS =================
 
         [HttpGet("pending-users")]
         public async Task<IActionResult> GetPendingUsers()
@@ -24,11 +25,23 @@ namespace LoginSignupAPI.Controllers
 
             var pendingUsers = users
                 .Where(user =>
-                    user.GetProperty("IsApproved").GetBoolean() == false
-                );
+                    user.TryGetProperty("IsApproved", out var approvedProp)
+                    && approvedProp.GetBoolean() == false
+                )
+                .Select(user => new
+                {
+                    _id = user.GetProperty("_id").GetString(),
+                    _rev = user.GetProperty("_rev").GetString(),
+                    FirstName = user.GetProperty("FirstName").GetString(),
+                    LastName = user.GetProperty("LastName").GetString(),
+                    Email = user.GetProperty("Email").GetString(),
+                    Role = user.GetProperty("Role").GetString()
+                })
+                .ToList();
 
             return Ok(pendingUsers);
         }
+
 
         // ================= APPROVE USER =================
 
@@ -42,7 +55,10 @@ namespace LoginSignupAPI.Controllers
 
             foreach (var user in users)
             {
-                if (user.GetProperty("_id").GetString() == id)
+                if (
+                    user.TryGetProperty("_id", out var idProp)
+                    && idProp.GetString() == id
+                )
                 {
                     var updatedUser = new
                     {
@@ -70,6 +86,7 @@ namespace LoginSignupAPI.Controllers
 
             return NotFound("User not found");
         }
+
 
         // ================= REJECT USER =================
 
