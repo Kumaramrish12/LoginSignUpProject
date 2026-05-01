@@ -4,8 +4,8 @@ using System.Text.Json;
 
 namespace LoginSignupAPI.Controllers
 {
-    [Route("api/admin")]
     [ApiController]
+    [Route("api/admin")]
     public class AdminController : ControllerBase
     {
         private readonly CouchDbService _couchDbService;
@@ -13,6 +13,37 @@ namespace LoginSignupAPI.Controllers
         public AdminController(CouchDbService couchDbService)
         {
             _couchDbService = couchDbService;
+        }
+
+
+        // ================= SAFE PROPERTY READER =================
+
+        private string GetString(JsonElement element, string propertyName)
+        {
+            foreach (var prop in element.EnumerateObject())
+            {
+                if (prop.Name.Equals(propertyName,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return prop.Value.GetString();
+                }
+            }
+
+            return "";
+        }
+
+        private bool GetBool(JsonElement element, string propertyName)
+        {
+            foreach (var prop in element.EnumerateObject())
+            {
+                if (prop.Name.Equals(propertyName,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return prop.Value.GetBoolean();
+                }
+            }
+
+            return false;
         }
 
 
@@ -26,26 +57,15 @@ namespace LoginSignupAPI.Controllers
                 var users = await _couchDbService.GetAllUsersAsync();
 
                 var pendingUsers = users
-                    .Where(u =>
-                        u.TryGetProperty("IsApproved", out var approved)
-                        && approved.GetBoolean() == false
-                    )
+                    .Where(u => GetBool(u, "IsApproved") == false)
                     .Select(u => new
                     {
-                        _id = u.GetProperty("_id").GetString(),
-                        _rev = u.GetProperty("_rev").GetString(),
+                        _id = GetString(u, "_id"),
+                        _rev = GetString(u, "_rev"),
 
-                        FirstName = u.TryGetProperty("FirstName", out var fn)
-                            ? fn.GetString()
-                            : "",
-
-                        Email = u.TryGetProperty("Email", out var em)
-                            ? em.GetString()
-                            : "",
-
-                        Role = u.TryGetProperty("Role", out var rl)
-                            ? rl.GetString()
-                            : ""
+                        firstName = GetString(u, "FirstName"),
+                        email = GetString(u, "Email"),
+                        role = GetString(u, "Role")
                     })
                     .ToList();
 
@@ -66,30 +86,26 @@ namespace LoginSignupAPI.Controllers
             var users = await _couchDbService.GetAllUsersAsync();
 
             var user = users.FirstOrDefault(u =>
-                u.GetProperty("_id").GetString() == id
+                GetString(u, "_id") == id
             );
 
             if (user.ValueKind == JsonValueKind.Undefined)
-                return NotFound();
+                return NotFound("User not found");
 
-            var updatedUser = new
-            {
-                FirstName = user.GetProperty("FirstName").GetString(),
-                LastName = user.GetProperty("LastName").GetString(),
-                Email = user.GetProperty("Email").GetString(),
-                Password = user.GetProperty("Password").GetString(),
-                ConfirmPassword = user.GetProperty("ConfirmPassword").GetString(),
-                Role = user.GetProperty("Role").GetString(),
-                IsApproved = true
-            };
+            var updatedUser =
+                JsonSerializer.Deserialize<Dictionary<string, object>>(user.ToString());
 
-            await _couchDbService.UpdateUserAsync(
+            updatedUser["IsApproved"] = true;
+
+            var success = await _couchDbService.UpdateUserAsync(
                 id,
-                user.GetProperty("_rev").GetString(),
+                GetString(user, "_rev"),
                 updatedUser
             );
 
-            return Ok();
+            return success
+                ? Ok("User approved successfully")
+                : BadRequest("Approval failed");
         }
 
 
@@ -101,18 +117,20 @@ namespace LoginSignupAPI.Controllers
             var users = await _couchDbService.GetAllUsersAsync();
 
             var user = users.FirstOrDefault(u =>
-                u.GetProperty("_id").GetString() == id
+                GetString(u, "_id") == id
             );
 
             if (user.ValueKind == JsonValueKind.Undefined)
-                return NotFound();
+                return NotFound("User not found");
 
-            await _couchDbService.DeleteUserAsync(
+            var success = await _couchDbService.DeleteUserAsync(
                 id,
-                user.GetProperty("_rev").GetString()
+                GetString(user, "_rev")
             );
 
-            return Ok();
+            return success
+                ? Ok("User deleted successfully")
+                : BadRequest("Delete failed");
         }
     }
 }
