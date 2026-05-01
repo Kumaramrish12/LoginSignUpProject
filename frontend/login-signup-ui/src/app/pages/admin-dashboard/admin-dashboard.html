@@ -6,7 +6,7 @@
 
 <hr>
 
-<!-- TAB A -->
+<!-- ================= TAB A ================= -->
 
 <div *ngIf="activeTab==='A'">
 
@@ -23,9 +23,9 @@
 
 <tr *ngFor="let user of pendingUsers">
 
-<td>{{user.FirstName}} {{user.LastName}}</td>
-<td>{{user.Email}}</td>
-<td>{{user.Role}}</td>
+<td>{{user.firstName}} {{user.lastName}}</td>
+<td>{{user.email}}</td>
+<td>{{user.role}}</td>
 
 <td>
 
@@ -41,7 +41,7 @@
 
 </div>
 
-<!-- TAB B -->
+<!-- ================= TAB B ================= -->
 
 <div *ngIf="activeTab==='B'">
 
@@ -56,9 +56,7 @@
 <option>All Users</option>
 
 <option *ngFor="let u of allUsers">
-
-{{u.Email}}
-
+{{u.email}}
 </option>
 
 </select>
@@ -74,12 +72,10 @@
 <table border="1">
 
 <tr>
-
 <th>Sender</th>
 <th>Receiver</th>
 <th>Message</th>
 <th>Time</th>
-
 </tr>
 
 <tr *ngFor="let msg of noticeHistory">
@@ -95,7 +91,7 @@
 
 </div>
 
-<!-- TAB C -->
+<!-- ================= TAB C ================= -->
 
 <div *ngIf="activeTab==='C'">
 

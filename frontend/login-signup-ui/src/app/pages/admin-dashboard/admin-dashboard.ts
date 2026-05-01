@@ -31,88 +31,63 @@ export class AdminDashboardComponent implements OnInit {
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
-
-    this.loadUsersFromDB();
-
+    this.loadPendingUsers();
+    this.loadAnalytics();
+    this.loadAllUsers();
   }
 
   setTab(tab: string) {
-
     this.activeTab = tab;
 
     if (tab === 'C') {
-
-      setTimeout(() => this.renderChart(), 200);
-
+      setTimeout(() => this.renderChart(), 300);
     }
-
   }
 
   logout() {
-
     localStorage.clear();
-
     window.location.href = '/login';
-
   }
 
-  // =========================
-  // LOAD USERS FROM COUCHDB
-  // =========================
+  // ================= TAB A =================
 
-  loadUsersFromDB() {
+  loadPendingUsers() {
 
     this.http.get<any>('http://localhost:5000/api/auth/all-users')
-
       .subscribe(res => {
 
-        const users = res.rows.map((x: any) => x.doc);
+        let users = [];
 
-        this.allUsers = users;
-
-        // TAB A → pending users
+        if (res.rows) {
+          users = res.rows.map((x: any) => x.doc);
+        } else {
+          users = res;
+        }
 
         this.pendingUsers = users.filter(
-
-          (u: any) => u.IsApproved === false
-
+          (u: any) =>
+            u.isApproved === false ||
+            u.IsApproved === false
         );
-
-        // TAB C → analytics counts
-
-        this.totalAdmins = users.filter(
-
-          (u: any) => u.Role === 'Admin'
-
-        ).length;
-
-        this.totalUsers = users.filter(
-
-          (u: any) => u.Role === 'User'
-
-        ).length;
 
       });
 
   }
 
-  // =========================
-  // TAB A APPROVE
-  // =========================
-
   approveUser(user: any) {
 
-    user.IsApproved = true;
+    const updatedUser = {
+      ...user,
+      isApproved: true
+    };
 
     this.http.put(
-
       `http://localhost:5000/api/admin/update-user/${user._id}`,
-
-      user
-
+      updatedUser
     ).subscribe(() => {
 
-      this.loadUsersFromDB();
+      this.loadPendingUsers();
+      this.loadAnalytics();
 
     });
 
@@ -121,35 +96,40 @@ export class AdminDashboardComponent implements OnInit {
   rejectUser(user: any) {
 
     this.http.delete(
-
       `http://localhost:5000/api/admin/delete-user/${user._id}`
-
     ).subscribe(() => {
 
-      this.loadUsersFromDB();
+      this.loadPendingUsers();
+      this.loadAnalytics();
 
     });
 
   }
 
-  // =========================
-  // TAB B SEND NOTICE
-  // =========================
+  // ================= TAB B =================
+
+  loadAllUsers() {
+
+    this.http.get<any>('http://localhost:5000/api/auth/all-users')
+      .subscribe(res => {
+
+        this.allUsers = res.rows
+          ? res.rows.map((x: any) => x.doc)
+          : res;
+
+      });
+
+  }
 
   sendNotice() {
 
     if (!this.noticeText) return;
 
     const notice = {
-
       sender: localStorage.getItem('email'),
-
       receiver: this.selectedReceiver,
-
       message: this.noticeText,
-
       timestamp: new Date()
-
     };
 
     this.noticeHistory.push(notice);
@@ -158,17 +138,24 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
-  // =========================
-  // TAB C CHART
-  // =========================
+  // ================= TAB C =================
+
+  loadAnalytics() {
+
+    this.http.get<any>('http://localhost:5000/api/dashboard/total-users')
+      .subscribe(data => {
+
+        this.totalAdmins = data.totalAdmins;
+        this.totalUsers = data.totalUsers;
+
+      });
+
+  }
 
   renderChart() {
 
-    const canvas = document.getElementById(
-
-      'analyticsChart'
-
-    ) as HTMLCanvasElement;
+    const canvas =
+      document.getElementById('analyticsChart') as HTMLCanvasElement;
 
     if (!canvas) return;
 
@@ -179,27 +166,13 @@ export class AdminDashboardComponent implements OnInit {
       type: 'bar',
 
       data: {
-
         labels: ['Admins', 'Users'],
-
         datasets: [
-
           {
-
             label: 'User Statistics',
-
-            data: [
-
-              this.totalAdmins,
-
-              this.totalUsers
-
-            ]
-
+            data: [this.totalAdmins, this.totalUsers]
           }
-
         ]
-
       }
 
     });
