@@ -1,181 +1,174 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import Chart from 'chart.js/auto';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [FormsModule, CommonModule],
-  templateUrl: './admin-dashboard.html',
-  styleUrls: ['./admin-dashboard.css']
+  imports: [CommonModule, FormsModule],
+  templateUrl: './admin-dashboard.html'
 })
 export class AdminDashboardComponent implements OnInit {
 
   activeTab = 'A';
 
   pendingUsers: any[] = [];
-  allUsers: any[] = [];
 
-  noticeText = '';
+  noticeMessage = '';
   selectedReceiver = 'All Users';
-
+  users: any[] = [];
   noticeHistory: any[] = [];
 
   totalAdmins = 0;
   totalUsers = 0;
-
-  chart: any;
+  pendingCount = 0;
 
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
     this.loadPendingUsers();
-    this.loadAnalytics();
     this.loadAllUsers();
+    this.loadAnalytics();
+    this.loadNoticeHistory();
   }
+
+  // ================= TAB SWITCH =================
 
   setTab(tab: string) {
     this.activeTab = tab;
-
-    if (tab === 'C') {
-      setTimeout(() => this.renderChart(), 300);
-    }
   }
 
-  logout() {
-    localStorage.clear();
-    window.location.href = '/login';
-  }
 
   // ================= TAB A =================
+  // LOAD PENDING USERS
 
   loadPendingUsers() {
 
-    this.http.get<any>('http://localhost:5000/api/auth/all-users')
+    this.http
+      .get<any[]>('http://localhost:5000/api/admin/pending-users')
       .subscribe(res => {
 
-        let users = [];
+        console.log('Pending Users:', res);
 
-        if (res.rows) {
-          users = res.rows.map((x: any) => x.doc);
-        } else {
-          users = res;
-        }
-
-        this.pendingUsers = users.filter(
-          (u: any) =>
-            u.isApproved === false ||
-            u.IsApproved === false
-        );
+        this.pendingUsers = res;
 
       });
 
   }
+
 
   approveUser(user: any) {
 
-    const updatedUser = {
-      ...user,
-      isApproved: true
-    };
+    this.http
+      .put(
+        `http://localhost:5000/api/admin/approve-user/${user._id}`,
+        {}
+      )
+      .subscribe(() => {
 
-    this.http.put(
-      `http://localhost:5000/api/admin/update-user/${user._id}`,
-      updatedUser
-    ).subscribe(() => {
+        this.loadPendingUsers();
+        this.loadAnalytics();
 
-      this.loadPendingUsers();
-      this.loadAnalytics();
-
-    });
+      });
 
   }
+
 
   rejectUser(user: any) {
 
-    this.http.delete(
-      `http://localhost:5000/api/admin/delete-user/${user._id}`
-    ).subscribe(() => {
+    this.http
+      .delete(
+        `http://localhost:5000/api/admin/delete-user/${user._id}`
+      )
+      .subscribe(() => {
 
-      this.loadPendingUsers();
-      this.loadAnalytics();
+        this.loadPendingUsers();
+        this.loadAnalytics();
 
-    });
+      });
 
   }
 
+
   // ================= TAB B =================
+  // LOAD USERS FOR DROPDOWN
 
   loadAllUsers() {
 
-    this.http.get<any>('http://localhost:5000/api/auth/all-users')
-      .subscribe(res => {
-
-        this.allUsers = res.rows
-          ? res.rows.map((x: any) => x.doc)
-          : res;
-
-      });
+    this.http
+      .get<any>('http://localhost:5000/api/dashboard/total-users')
+      .subscribe();
 
   }
+
+
+  // SEND NOTICE
 
   sendNotice() {
 
-    if (!this.noticeText) return;
+    if (!this.noticeMessage.trim()) return;
 
     const notice = {
-      sender: localStorage.getItem('email'),
+
+      sender: 'Admin',
       receiver: this.selectedReceiver,
-      message: this.noticeText,
+      message: this.noticeMessage,
       timestamp: new Date()
+
     };
 
-    this.noticeHistory.push(notice);
+    this.http
+      .post('http://localhost:5000/api/chat/send', notice)
+      .subscribe(() => {
 
-    this.noticeText = '';
-
-  }
-
-  // ================= TAB C =================
-
-  loadAnalytics() {
-
-    this.http.get<any>('http://localhost:5000/api/dashboard/total-users')
-      .subscribe(data => {
-
-        this.totalAdmins = data.totalAdmins;
-        this.totalUsers = data.totalUsers;
+        this.noticeMessage = '';
+        this.loadNoticeHistory();
 
       });
 
   }
 
-  renderChart() {
 
-    const canvas =
-      document.getElementById('analyticsChart') as HTMLCanvasElement;
+  // LOAD NOTICE HISTORY
 
-    if (!canvas) return;
+  loadNoticeHistory() {
 
-    if (this.chart) this.chart.destroy();
+    this.http
+      .get<any[]>('http://localhost:5000/api/chat/messages')
+      .subscribe(res => {
 
-    this.chart = new Chart(canvas, {
+        this.noticeHistory = res;
 
-      type: 'bar',
+      });
 
-      data: {
-        labels: ['Admins', 'Users'],
-        datasets: [
-          {
-            label: 'User Statistics',
-            data: [this.totalAdmins, this.totalUsers]
-          }
-        ]
-      }
+  }
 
-    });
+
+  // ================= TAB C =================
+  // ANALYTICS
+
+  loadAnalytics() {
+
+    this.http
+      .get<any>('http://localhost:5000/api/dashboard/total-users')
+      .subscribe(res => {
+
+        this.totalAdmins = res.totalAdmins;
+        this.totalUsers = res.totalUsers;
+        this.pendingCount = res.pendingUsers;
+
+      });
+
+  }
+
+
+  // ================= LOGOUT =================
+
+  logout() {
+
+    localStorage.clear();
+    location.href = '/login';
 
   }
 

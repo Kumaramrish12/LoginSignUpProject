@@ -4,8 +4,8 @@ using System.Text.Json;
 
 namespace LoginSignupAPI.Controllers
 {
-    [ApiController]
     [Route("api/admin")]
+    [ApiController]
     public class AdminController : ControllerBase
     {
         private readonly CouchDbService _couchDbService;
@@ -21,88 +21,98 @@ namespace LoginSignupAPI.Controllers
         [HttpGet("pending-users")]
         public async Task<IActionResult> GetPendingUsers()
         {
-            var users = await _couchDbService.GetAllUsersAsync();
+            try
+            {
+                var users = await _couchDbService.GetAllUsersAsync();
 
-            var pendingUsers = users
-                .Where(user =>
-                    user.TryGetProperty("IsApproved", out var approvedProp)
-                    && approvedProp.GetBoolean() == false
-                )
-                .Select(user => new
-                {
-                    _id = user.GetProperty("_id").GetString(),
-                    _rev = user.GetProperty("_rev").GetString(),
-                    FirstName = user.GetProperty("FirstName").GetString(),
-                    LastName = user.GetProperty("LastName").GetString(),
-                    Email = user.GetProperty("Email").GetString(),
-                    Role = user.GetProperty("Role").GetString()
-                })
-                .ToList();
+                var pendingUsers = users
+                    .Where(u =>
+                        u.TryGetProperty("IsApproved", out var approved)
+                        && approved.GetBoolean() == false
+                    )
+                    .Select(u => new
+                    {
+                        _id = u.GetProperty("_id").GetString(),
+                        _rev = u.GetProperty("_rev").GetString(),
 
-            return Ok(pendingUsers);
+                        FirstName = u.TryGetProperty("FirstName", out var fn)
+                            ? fn.GetString()
+                            : "",
+
+                        Email = u.TryGetProperty("Email", out var em)
+                            ? em.GetString()
+                            : "",
+
+                        Role = u.TryGetProperty("Role", out var rl)
+                            ? rl.GetString()
+                            : ""
+                    })
+                    .ToList();
+
+                return Ok(pendingUsers);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
 
 
         // ================= APPROVE USER =================
 
         [HttpPut("approve-user/{id}")]
-        public async Task<IActionResult> ApproveUser(
-            string id,
-            [FromQuery] string rev
-        )
+        public async Task<IActionResult> ApproveUser(string id)
         {
             var users = await _couchDbService.GetAllUsersAsync();
 
-            foreach (var user in users)
+            var user = users.FirstOrDefault(u =>
+                u.GetProperty("_id").GetString() == id
+            );
+
+            if (user.ValueKind == JsonValueKind.Undefined)
+                return NotFound();
+
+            var updatedUser = new
             {
-                if (
-                    user.TryGetProperty("_id", out var idProp)
-                    && idProp.GetString() == id
-                )
-                {
-                    var updatedUser = new
-                    {
-                        FirstName = user.GetProperty("FirstName").GetString(),
-                        LastName = user.GetProperty("LastName").GetString(),
-                        Email = user.GetProperty("Email").GetString(),
-                        Password = user.GetProperty("Password").GetString(),
-                        Role = user.GetProperty("Role").GetString(),
-                        IsApproved = true
-                    };
+                FirstName = user.GetProperty("FirstName").GetString(),
+                LastName = user.GetProperty("LastName").GetString(),
+                Email = user.GetProperty("Email").GetString(),
+                Password = user.GetProperty("Password").GetString(),
+                ConfirmPassword = user.GetProperty("ConfirmPassword").GetString(),
+                Role = user.GetProperty("Role").GetString(),
+                IsApproved = true
+            };
 
-                    var success =
-                        await _couchDbService.UpdateUserAsync(
-                            id,
-                            rev,
-                            updatedUser
-                        );
+            await _couchDbService.UpdateUserAsync(
+                id,
+                user.GetProperty("_rev").GetString(),
+                updatedUser
+            );
 
-                    if (success)
-                        return Ok("User approved successfully");
-
-                    return StatusCode(500, "Approval failed");
-                }
-            }
-
-            return NotFound("User not found");
+            return Ok();
         }
 
 
-        // ================= REJECT USER =================
+        // ================= DELETE USER =================
 
         [HttpDelete("delete-user/{id}")]
-        public async Task<IActionResult> DeleteUser(
-            string id,
-            [FromQuery] string rev
-        )
+        public async Task<IActionResult> DeleteUser(string id)
         {
-            var success =
-                await _couchDbService.DeleteUserAsync(id, rev);
+            var users = await _couchDbService.GetAllUsersAsync();
 
-            if (success)
-                return Ok("User rejected and deleted");
+            var user = users.FirstOrDefault(u =>
+                u.GetProperty("_id").GetString() == id
+            );
 
-            return StatusCode(500, "Delete failed");
+            if (user.ValueKind == JsonValueKind.Undefined)
+                return NotFound();
+
+            await _couchDbService.DeleteUserAsync(
+                id,
+                user.GetProperty("_rev").GetString()
+            );
+
+            return Ok();
         }
     }
 }

@@ -1,3 +1,9 @@
+
+
+
+
+<hr>
+
 <h2>Admin Dashboard</h2>
 
 <button (click)="setTab('A')">Tab A - Approvals</button>
@@ -6,116 +12,127 @@
 
 <hr>
 
+
 <!-- ================= TAB A ================= -->
 
-<div *ngIf="activeTab==='A'">
+<div *ngIf="activeTab === 'A'">
 
-<h3>Pending User Approvals</h3>
+  <h3>Pending User Approvals</h3>
 
-<table border="1">
+  <table border="1">
 
-<tr>
-<th>Name</th>
-<th>Email</th>
-<th>Role</th>
-<th>Action</th>
-</tr>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Role</th>
+      <th>Action</th>
+    </tr>
 
-<tr *ngFor="let user of pendingUsers">
+    <tr *ngFor="let user of pendingUsers">
 
-<td>{{user.firstName}} {{user.lastName}}</td>
-<td>{{user.email}}</td>
-<td>{{user.role}}</td>
+      <td>{{user.FirstName}}</td>
+      <td>{{user.Email}}</td>
+      <td>{{user.Role}}</td>
 
-<td>
+      <td>
 
-<button (click)="approveUser(user)">Approve</button>
+        <button (click)="approveUser(user)">
+          Approve
+        </button>
 
-<button (click)="rejectUser(user)">Reject</button>
+        <button (click)="rejectUser(user)">
+          Reject
+        </button>
 
-</td>
+      </td>
 
-</tr>
+    </tr>
 
-</table>
+  </table>
 
 </div>
+
 
 <!-- ================= TAB B ================= -->
 
-<div *ngIf="activeTab==='B'">
+<div *ngIf="activeTab === 'B'">
 
-<h3>Send Notice</h3>
+  <h3>Send Notice</h3>
 
-<input [(ngModel)]="noticeText">
+  <input
+    type="text"
+    [(ngModel)]="noticeMessage"
+    placeholder="Enter message"
+  >
 
-<br><br>
+  <br><br>
 
-<select [(ngModel)]="selectedReceiver">
+  <select [(ngModel)]="selectedReceiver">
 
-<option>All Users</option>
+    <option>All Users</option>
+    <option>Admins</option>
+    <option>Users</option>
 
-<option *ngFor="let u of allUsers">
-{{u.email}}
-</option>
+  </select>
 
-</select>
+  <br><br>
 
-<br><br>
+  <button (click)="sendNotice()">
+    Send Notice
+  </button>
 
-<button (click)="sendNotice()">Send Notice</button>
 
-<hr>
+  <hr>
 
-<h3>Message History</h3>
+  <h3>Message History</h3>
 
-<table border="1">
+  <table border="1">
 
-<tr>
-<th>Sender</th>
-<th>Receiver</th>
-<th>Message</th>
-<th>Time</th>
-</tr>
+    <tr>
+      <th>Sender</th>
+      <th>Receiver</th>
+      <th>Message</th>
+      <th>Time</th>
+    </tr>
 
-<tr *ngFor="let msg of noticeHistory">
+    <tr *ngFor="let notice of noticeHistory">
 
-<td>{{msg.sender}}</td>
-<td>{{msg.receiver}}</td>
-<td>{{msg.message}}</td>
-<td>{{msg.timestamp}}</td>
+      <td>{{notice.sender}}</td>
+      <td>{{notice.receiver}}</td>
+      <td>{{notice.message}}</td>
+      <td>{{notice.timestamp}}</td>
 
-</tr>
+    </tr>
 
-</table>
+  </table>
 
 </div>
+
 
 <!-- ================= TAB C ================= -->
 
-<div *ngIf="activeTab==='C'">
+<div *ngIf="activeTab === 'C'">
 
-<h3>Dashboard Analytics</h3>
+  <h3>Dashboard Analytics</h3>
 
-<canvas id="analyticsChart"></canvas>
+  <table border="1">
 
-<br><br>
+    <tr>
+      <th>Total Admins</th>
+      <th>Total Users</th>
+      <th>Pending Users</th>
+    </tr>
 
-<table border="1">
+    <tr>
+      <td>{{totalAdmins}}</td>
+      <td>{{totalUsers}}</td>
+      <td>{{pendingCount}}</td>
+    </tr>
 
-<tr>
-<th>Total Admins</th>
-<th>Total Users</th>
-</tr>
-
-<tr>
-<td>{{totalAdmins}}</td>
-<td>{{totalUsers}}</td>
-</tr>
-
-</table>
+  </table>
 
 </div>
+
 
 <hr>
 
