@@ -1,10 +1,12 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace LoginSignupAPI.Models
 {
+    
     public class User
     {
-        public string? _id { get; set; }
-
-        public string? _rev { get; set; }
+        [Key]
+        public int Id { get; set; }   // REQUIRED PRIMARY KEY
 
         public string FirstName { get; set; }
 

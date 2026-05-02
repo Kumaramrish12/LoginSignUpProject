@@ -34,6 +34,7 @@ export class SignupComponent {
       LastName: this.LastName,
       Email: this.Email,
       Password: this.Password,
+      ConfirmPassword: this.ConfirmPassword,
       Role: this.Role
     };
 

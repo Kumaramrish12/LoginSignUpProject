@@ -8,82 +8,122 @@ namespace LoginSignupAPI.Controllers
     [Route("api/auth")]
     public class AuthController : ControllerBase
     {
-        private readonly CouchDbService _couchDbService;
+        private readonly CouchDbService _couchDb;
 
-        public AuthController(CouchDbService couchDbService)
+        public AuthController(CouchDbService couchDb)
         {
-            _couchDbService = couchDbService;
+            _couchDb = couchDb;
         }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] JsonElement data)
+
+        // ================= REGISTER =================
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] JsonElement user)
         {
-            Console.WriteLine("LOGIN API HIT");
-
-            string email = "";
-            string password = "";
-
-            if (data.TryGetProperty("Email", out var e1))
-                email = e1.GetString();
-
-            if (data.TryGetProperty("email", out var e2))
-                email = e2.GetString();
-
-            if (data.TryGetProperty("Password", out var p1))
-                password = p1.GetString();
-
-            if (data.TryGetProperty("password", out var p2))
-                password = p2.GetString();
-
-            Console.WriteLine($"EMAIL RECEIVED: {email}");
-            Console.WriteLine($"PASSWORD RECEIVED: {password}");
-
-            var users = await _couchDbService.GetAllUsersAsync();
-
-            Console.WriteLine($"TOTAL USERS FOUND: {users.Count}");
-
-            foreach (var user in users)
+            try
             {
-                // Skip invalid docs safely
-                if (!user.TryGetProperty("Email", out var dbEmailProp))
-                    continue;
+                if (user.ValueKind == JsonValueKind.Undefined)
+                    return BadRequest("Invalid request body");
 
-                if (!user.TryGetProperty("Password", out var dbPasswordProp))
-                    continue;
+                var userDict =
+                    JsonSerializer.Deserialize<Dictionary<string, object>>(user);
 
-                if (!user.TryGetProperty("IsApproved", out var approvedProp))
-                    continue;
+                if (userDict == null)
+                    return BadRequest("Invalid data");
 
-                if (!user.TryGetProperty("Role", out var roleProp))
-                    continue;
+                // Remove ConfirmPassword if Angular sends it
+                if (userDict.ContainsKey("ConfirmPassword"))
+                    userDict.Remove("ConfirmPassword");
 
-                var dbEmail = dbEmailProp.GetString();
-                var dbPassword = dbPasswordProp.GetString();
-                var approved = approvedProp.GetBoolean();
+                // Always add approval flag
+                userDict["IsApproved"] = false;
 
-                Console.WriteLine($"CHECKING USER: {dbEmail}");
+                var success =
+                    await _couchDb.CreateUserAsync(userDict);
 
-                if (dbEmail == email && dbPassword == password)
-                {
-                    if (!approved)
-                    {
-                        Console.WriteLine("USER NOT APPROVED");
-                        return Unauthorized("Approval pending");
-                    }
+                if (!success)
+                    return StatusCode(500, "Registration failed");
 
-                    Console.WriteLine("LOGIN SUCCESS");
-
-                    return Ok(new
-                    {
-                        email = dbEmail,
-                        role = roleProp.GetString()
-                    });
-                }
+                return Ok("Registration successful");
             }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
 
-            Console.WriteLine("NO MATCH FOUND");
 
-            return Unauthorized("Invalid credentials");
+        // ================= LOGIN =================
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] JsonElement request)
+        {
+            try
+            {
+                string email = "";
+                string password = "";
+
+                // Accept email OR Email
+                if (request.TryGetProperty("email", out var emailLower))
+                    email = emailLower.GetString();
+
+                else if (request.TryGetProperty("Email", out var emailUpper))
+                    email = emailUpper.GetString();
+
+                // Accept Password OR password
+                if (request.TryGetProperty("Password", out var passUpper))
+                    password = passUpper.GetString();
+
+                else if (request.TryGetProperty("password", out var passLower))
+                    password = passLower.GetString();
+
+                if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+                    return BadRequest("Email or Password missing");
+
+                var users =
+                    await _couchDb.GetAllUsersAsync();
+
+                foreach (var user in users)
+                {
+                    if (!user.TryGetProperty("Email", out var dbEmailProp))
+                        continue;
+
+                    if (!user.TryGetProperty("Password", out var dbPassProp))
+                        continue;
+
+                    var dbEmail = dbEmailProp.GetString();
+                    var dbPassword = dbPassProp.GetString();
+
+                    if (dbEmail == email && dbPassword == password)
+                    {
+                        bool approved = false;
+
+                        if (user.TryGetProperty("IsApproved", out var approvedProp))
+                            approved = approvedProp.GetBoolean();
+
+                        if (!approved)
+                            return Unauthorized("Approval pending");
+
+                        string role = "User";
+
+                        if (user.TryGetProperty("Role", out var roleProp))
+                            role = roleProp.GetString();
+
+                        return Ok(new
+                        {
+                            email = dbEmail,
+                            role = role
+                        });
+                    }
+                }
+
+                return Unauthorized("Invalid credentials");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
     }
 }
