@@ -1,4 +1,4 @@
-<div class="admin-dashboard">
+<div class="dashboard">
 
   <h2>Admin Dashboard</h2>
 
@@ -14,37 +14,35 @@
 
     <h3>Pending User Approvals</h3>
 
-    <table>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Action</th>
-      </tr>
+    <div class="table-container">
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Action</th>
+        </tr>
 
-      <tr *ngFor="let user of pendingUsers">
-        <td>{{user.firstName}}</td>
-        <td>{{user.email}}</td>
-        <td>{{user.role}}</td>
-
-        <td>
-          <button class="approve" (click)="approveUser(user)">Approve</button>
-          <button class="reject" (click)="rejectUser(user)">Reject</button>
-        </td>
-      </tr>
-
-    </table>
+        <tr *ngFor="let user of pendingUsers">
+          <td>{{user.firstName}}</td>
+          <td>{{user.email}}</td>
+          <td>{{user.role}}</td>
+          <td>
+            <button class="approve" (click)="approveUser(user)">Approve</button>
+            <button class="reject" (click)="rejectUser(user)">Reject</button>
+          </td>
+        </tr>
+      </table>
+    </div>
 
   </div>
-
 
   <!-- ================= TAB B ================= -->
   <div *ngIf="activeTab === 'B'" class="card">
 
     <h3>Send Notice</h3>
 
-    <div class="form-row">
-
+    <div class="input-area">
       <input
         type="text"
         [(ngModel)]="noticeMessage"
@@ -57,39 +55,41 @@
         <option>Users</option>
       </select>
 
-      <button class="send" (click)="sendNotice()">Send</button>
-
+      <button (click)="sendNotice()">Send</button>
     </div>
-
-    <hr>
 
     <h3>Message History</h3>
 
-    <table>
-      <tr>
-        <th>Sender</th>
-        <th>Receiver</th>
-        <th>Message</th>
-        <th>Time</th>
-      </tr>
+    <!-- ✅ SCROLLABLE TABLE -->
+    <div class="table-container">
 
-      <tr *ngFor="let notice of noticeHistory">
-        <td>{{notice.senderEmail}}</td>
-        <td>{{notice.receiverEmail}}</td>
-        <td>{{notice.content}}</td>
-        <td>{{notice.timestamp}}</td>
-      </tr>
+      <table>
+        <tr>
+          <th>Sender</th>
+          <th>Receiver</th>
+          <th>Message</th>
+          <th>Time</th>
+        </tr>
 
-    </table>
+        <tr *ngFor="let notice of noticeHistory">
+          <td>{{notice.senderEmail}}</td>
+          <td>{{notice.receiverEmail}}</td>
+          <td>{{notice.content}}</td>
+          <td>{{notice.timestamp}}</td>
+        </tr>
+
+      </table>
+
+    </div>
 
   </div>
-
 
   <!-- ================= TAB C ================= -->
   <div *ngIf="activeTab === 'C'" class="card">
 
     <h3>Analytics Overview</h3>
 
+    <!-- ✅ STATS CARDS -->
     <div class="stats">
 
       <div class="stat-card blue">
@@ -107,6 +107,11 @@
         <p>{{pendingCount}}</p>
       </div>
 
+    </div>
+
+    <!-- ✅ SMALL CHART -->
+    <div class="chart-box">
+      <canvas id="adminChart"></canvas>
     </div>
 
   </div>

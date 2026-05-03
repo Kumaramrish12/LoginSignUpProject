@@ -2,13 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import Chart from 'chart.js/auto';   // ✅ ADDED (for chart)
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './admin-dashboard.html',
-  styleUrls: ['./admin-dashboard.css']
+  styleUrls: ['./admin-dashboard.css']   // ✅ make sure comma is present
 })
 export class AdminDashboardComponent implements OnInit {
 
@@ -25,6 +26,8 @@ export class AdminDashboardComponent implements OnInit {
   totalUsers = 0;
   pendingCount = 0;
 
+  chart: any;   // ✅ ADDED (for chart instance)
+
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
@@ -34,13 +37,16 @@ export class AdminDashboardComponent implements OnInit {
     this.loadNoticeHistory();
   }
 
-
   // ================= TAB SWITCH =================
 
   setTab(tab: string) {
     this.activeTab = tab;
-  }
 
+    // ✅ ONLY UI ADDITION (no logic change)
+    if (tab === 'C') {
+      setTimeout(() => this.loadChart(), 200);
+    }
+  }
 
   // ================= TAB A =================
 
@@ -56,7 +62,6 @@ export class AdminDashboardComponent implements OnInit {
       });
 
   }
-
 
   approveUser(user: any) {
 
@@ -74,7 +79,6 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
-
   rejectUser(user: any) {
 
     this.http
@@ -90,13 +94,10 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
-
   // ================= TAB B =================
-  // ✅ FIXED ONLY THIS SECTION
 
   loadAllUsers() {
 
-    // Optional dropdown loader (kept safe, unchanged logic elsewhere)
     this.http
       .get<any[]>('http://localhost:5000/api/chat/messages')
       .subscribe({
@@ -106,7 +107,6 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
-
   sendNotice() {
 
     if (!this.noticeMessage.trim()) return;
@@ -114,13 +114,9 @@ export class AdminDashboardComponent implements OnInit {
     const notice = {
 
       id: 0,
-
       senderEmail: 'admin@gmail.com',
-
       receiverEmail: this.selectedReceiver.toLowerCase(),
-
       content: this.noticeMessage,
-
       timestamp: new Date().toISOString()
 
     };
@@ -131,7 +127,6 @@ export class AdminDashboardComponent implements OnInit {
         next: () => {
 
           this.noticeMessage = '';
-
           this.loadNoticeHistory();
 
         },
@@ -144,7 +139,6 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
-
   loadNoticeHistory() {
 
     this.http
@@ -156,7 +150,6 @@ export class AdminDashboardComponent implements OnInit {
       });
 
   }
-
 
   // ================= TAB C =================
 
@@ -174,6 +167,42 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
+  // ✅ NEW: SMALL DOUGHNUT CHART (UI ONLY)
+
+  loadChart() {
+
+    const canvas = document.getElementById('adminChart') as HTMLCanvasElement;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // destroy old chart if exists
+    if (this.chart) {
+      this.chart.destroy();
+    }
+
+    this.chart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Admins', 'Users', 'Pending'],
+        datasets: [
+          {
+            data: [this.totalAdmins, this.totalUsers, this.pendingCount]
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+
+  }
 
   // ================= LOGOUT =================
 

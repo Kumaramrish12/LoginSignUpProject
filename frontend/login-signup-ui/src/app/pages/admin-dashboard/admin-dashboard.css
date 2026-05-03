@@ -1,24 +1,17 @@
-/* BACKGROUND SAME AS USER DASHBOARD */
+/* BACKGROUND */
 body {
   margin: 0;
   font-family: 'Segoe UI', sans-serif;
-  background: linear-gradient(120deg, #4f46e5, #06b6d4);
+  background: linear-gradient(120deg, #3f599f, #22c55e);
 }
 
 /* MAIN CONTAINER */
-.admin-dashboard {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 30px;
-  background: rgba(255,255,255,0.95);
-  border-radius: 15px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-}
-
-/* TITLE */
-.admin-dashboard h2 {
-  text-align: center;
-  margin-bottom: 20px;
+.dashboard {
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 25px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 12px;
 }
 
 /* TABS */
@@ -29,7 +22,7 @@ body {
 
 .tabs button {
   margin: 0 8px;
-  padding: 8px 16px;
+  padding: 8px 15px;
   border: none;
   background: #e5e7eb;
   border-radius: 6px;
@@ -46,14 +39,34 @@ body {
   background: white;
   padding: 20px;
   border-radius: 12px;
-  margin-top: 20px;
+  margin-top: 15px;
+}
+
+/* INPUT */
+.input-area {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.input-area input {
+  flex: 1;
+  padding: 8px;
+}
+
+.input-area select {
+  padding: 8px;
 }
 
 /* TABLE */
+.table-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 15px;
 }
 
 th {
@@ -67,72 +80,49 @@ th, td {
 
 /* BUTTONS */
 .approve {
-  background: #10b981;
+  background: #22c55e;
   color: white;
   border: none;
-  padding: 6px 10px;
-  margin-right: 5px;
-  border-radius: 5px;
+  padding: 5px 10px;
 }
 
 .reject {
   background: #ef4444;
   color: white;
   border: none;
-  padding: 6px 10px;
-  border-radius: 5px;
-}
-
-.send {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-}
-
-/* FORM */
-.form-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.form-row input {
-  flex: 1;
-  padding: 8px;
-  border-radius: 6px;
-}
-
-.form-row select {
-  padding: 8px;
+  padding: 5px 10px;
 }
 
 /* STATS */
 .stats {
   display: flex;
   gap: 15px;
-  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .stat-card {
   flex: 1;
-  padding: 15px;
+  padding: 20px;
   border-radius: 10px;
   color: white;
   text-align: center;
 }
 
-.stat-card.blue { background: #3b82f6; }
-.stat-card.green { background: #10b981; }
-.stat-card.orange { background: #f59e0b; }
+.blue { background: #3b82f6; }
+.green { background: #10b981; }
+.orange { background: #f59e0b; }
+
+/* CHART */
+.chart-box {
+  width: 300px;
+  margin: auto;
+}
 
 /* LOGOUT */
 .logout {
   margin-top: 20px;
   background: #ef4444;
   color: white;
+  padding: 8px 15px;
   border: none;
-  padding: 10px 15px;
-  border-radius: 6px;
 }
