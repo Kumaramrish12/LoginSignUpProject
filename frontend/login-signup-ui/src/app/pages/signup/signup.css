@@ -46,3 +46,12 @@
 .login-link {
   margin-top: 15px;
 }
+.form-group {
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+}

@@ -1,109 +1,118 @@
-<h2>User Dashboard</h2>
+<div class="dashboard">
 
-<button (click)="setTab('D')">Tab D - Notice Board</button>
-<button (click)="setTab('E')">Tab E - Message History</button>
-<button (click)="setTab('F')">Tab F - Analytics</button>
+  <h2>User Dashboard</h2>
 
-<hr>
+  <!-- TABS -->
+  <div class="tabs">
+    <button (click)="setTab('D')" [class.active]="activeTab==='D'">Notice Board</button>
+    <button (click)="setTab('E')" [class.active]="activeTab==='E'">Message History</button>
+    <button (click)="setTab('F')" [class.active]="activeTab==='F'">Analytics</button>
+  </div>
 
-<!-- TAB D -->
+  <!-- TAB D -->
+  <div *ngIf="activeTab==='D'" class="card">
 
-<div *ngIf="activeTab==='D'">
+    <h3>Notice Board</h3>
 
-<h3>Notice Board</h3>
+    <div class="chat-container">
 
-<div *ngFor="let msg of messages">
+      <div *ngFor="let msg of messages">
 
-<div *ngIf="msg.senderEmail !== currentUserEmail">
+        <!-- RECEIVED -->
+        <div *ngIf="msg.senderEmail !== currentUserEmail"
+             class="message-card received">
 
-📩 <b>{{msg.senderEmail}}</b> → {{msg.receiverGroup}}
+          📩 <b>{{msg.senderEmail}}</b> → {{msg.receiverGroup}} <br>
+          {{msg.content}} <br>
+          <small>{{msg.timestamp}}</small>
 
-<br>
+        </div>
 
-{{msg.content}}
+        <!-- SENT -->
+        <div *ngIf="msg.senderEmail === currentUserEmail"
+             class="message-card sent">
 
-<br>
+          📤 <b>You</b> → {{msg.receiverGroup}} <br>
+          {{msg.content}} <br>
+          <small>{{msg.timestamp}}</small>
 
-<small>{{msg.timestamp}}</small>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- INPUT AREA -->
+    <div class="input-area">
+      <input placeholder="Enter message" [(ngModel)]="noticeMessage">
+
+      <select [(ngModel)]="selectedGroup">
+        <option *ngFor="let g of groups">{{g}}</option>
+      </select>
+
+      <button (click)="sendNotice()">Send</button>
+    </div>
+
+  </div>
+
+
+  <!-- TAB E -->
+  <div *ngIf="activeTab==='E'" class="card">
+
+    <h3>Message History</h3>
+
+    <table>
+      <tr>
+        <th>Sender</th>
+        <th>Receiver</th>
+        <th>Message</th>
+        <th>Timestamp</th>
+      </tr>
+
+      <tr *ngFor="let msg of messages">
+        <td>{{msg.senderEmail}}</td>
+        <td>{{msg.receiverGroup}}</td>
+        <td>{{msg.content}}</td>
+        <td>{{msg.timestamp}}</td>
+      </tr>
+    </table>
+
+  </div>
+
+
+  <!-- TAB F -->
+  <div *ngIf="activeTab==='F'" class="card analytics-card">
+
+    <h3>Analytics Dashboard</h3>
+
+    <!-- STATS -->
+    <div class="stats">
+
+      <div class="stat-card blue">
+        <h4>Total</h4>
+        <p>{{messages.length}}</p>
+      </div>
+
+      <div class="stat-card green">
+        <h4>Sent</h4>
+        <p>{{ messages.filter(m => m.senderEmail === currentUserEmail).length }}</p>
+      </div>
+
+      <div class="stat-card orange">
+        <h4>Received</h4>
+        <p>{{ messages.filter(m => m.senderEmail !== currentUserEmail).length }}</p>
+      </div>
+
+    </div>
+
+    <!-- CHART -->
+    <div class="chart-box">
+      <canvas id="userChart" width="280" height="280"></canvas>
+    </div>
+
+  </div>
+
+  <!-- LOGOUT -->
+  <button class="logout" (click)="logout()">Logout</button>
 
 </div>
-
-<div align="right" *ngIf="msg.senderEmail === currentUserEmail">
-
-📤 <b>You</b> → {{msg.receiverGroup}}
-
-<br>
-
-{{msg.content}}
-
-<br>
-
-<small>{{msg.timestamp}}</small>
-
-</div>
-
-<hr>
-
-</div>
-
-<input
-placeholder="Enter message"
-[(ngModel)]="noticeMessage">
-
-<select [(ngModel)]="selectedGroup">
-
-<option *ngFor="let g of groups">
-{{g}}
-</option>
-
-</select>
-
-<button (click)="sendNotice()">Send</button>
-
-</div>
-
-
-<!-- TAB E -->
-
-<div *ngIf="activeTab==='E'">
-
-<h3>Message History Table</h3>
-
-<table border="1">
-
-<tr>
-
-<th>Sender</th>
-<th>Receiver</th>
-<th>Message</th>
-<th>Timestamp</th>
-
-</tr>
-
-<tr *ngFor="let msg of messages">
-
-<td>{{msg.senderEmail}}</td>
-<td>{{msg.receiverGroup}}</td>
-<td>{{msg.content}}</td>
-<td>{{msg.timestamp}}</td>
-
-</tr>
-
-</table>
-
-</div>
-
-
-<!-- TAB F -->
-
-<div *ngIf="activeTab==='F'">
-
-<h3>Analytics Pie Chart</h3>
-
-<canvas id="userChart"></canvas>
-
-</div>
-
-<hr>
-
-<button (click)="logout()">Logout</button>

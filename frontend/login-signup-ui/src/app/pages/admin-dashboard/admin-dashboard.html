@@ -1,135 +1,117 @@
+<div class="admin-dashboard">
 
-<hr>
+  <h2>Admin Dashboard</h2>
 
-<h2>Admin Dashboard</h2>
+  <!-- TABS -->
+  <div class="tabs">
+    <button (click)="setTab('A')" [class.active]="activeTab==='A'">Approvals</button>
+    <button (click)="setTab('B')" [class.active]="activeTab==='B'">Notice Board</button>
+    <button (click)="setTab('C')" [class.active]="activeTab==='C'">Analytics</button>
+  </div>
 
-<button (click)="setTab('A')">Tab A - Approvals</button>
-<button (click)="setTab('B')">Tab B - Notice Board</button>
-<button (click)="setTab('C')">Tab C - Analytics</button>
+  <!-- ================= TAB A ================= -->
+  <div *ngIf="activeTab === 'A'" class="card">
 
-<hr>
+    <h3>Pending User Approvals</h3>
 
-<!-- ================= TAB A ================= -->
+    <table>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Action</th>
+      </tr>
 
-<div *ngIf="activeTab === 'A'">
+      <tr *ngFor="let user of pendingUsers">
+        <td>{{user.firstName}}</td>
+        <td>{{user.email}}</td>
+        <td>{{user.role}}</td>
 
-  <h3>Pending User Approvals</h3>
+        <td>
+          <button class="approve" (click)="approveUser(user)">Approve</button>
+          <button class="reject" (click)="rejectUser(user)">Reject</button>
+        </td>
+      </tr>
 
-  <table border="1">
+    </table>
 
-    <tr>
-      <th>Name</th>
-      <th>Email</th>
-      <th>Role</th>
-      <th>Action</th>
-    </tr>
-
-    <tr *ngFor="let user of pendingUsers">
-
-      <td>{{user.firstName}}</td>
-      <td>{{user.email}}</td>
-      <td>{{user.role}}</td>
-
-      <td>
-
-        <button (click)="approveUser(user)">
-          Approve
-        </button>
-
-        <button (click)="rejectUser(user)">
-          Reject
-        </button>
-
-      </td>
-
-    </tr>
-
-  </table>
-
-</div>
+  </div>
 
 
-<!-- ================= TAB B ================= -->
+  <!-- ================= TAB B ================= -->
+  <div *ngIf="activeTab === 'B'" class="card">
 
-<div *ngIf="activeTab === 'B'">
+    <h3>Send Notice</h3>
 
-  <h3>Send Notice</h3>
+    <div class="form-row">
 
-  <input
-    type="text"
-    [(ngModel)]="noticeMessage"
-    placeholder="Enter message"
-  >
+      <input
+        type="text"
+        [(ngModel)]="noticeMessage"
+        placeholder="Enter message"
+      >
 
-  <br><br>
+      <select [(ngModel)]="selectedReceiver">
+        <option>All Users</option>
+        <option>Admins</option>
+        <option>Users</option>
+      </select>
 
-  <select [(ngModel)]="selectedReceiver">
+      <button class="send" (click)="sendNotice()">Send</button>
 
-    <option>All Users</option>
-    <option>Admins</option>
-    <option>Users</option>
+    </div>
 
-  </select>
+    <hr>
 
-  <br><br>
+    <h3>Message History</h3>
 
-  <button (click)="sendNotice()">
-    Send Notice
-  </button>
+    <table>
+      <tr>
+        <th>Sender</th>
+        <th>Receiver</th>
+        <th>Message</th>
+        <th>Time</th>
+      </tr>
 
+      <tr *ngFor="let notice of noticeHistory">
+        <td>{{notice.senderEmail}}</td>
+        <td>{{notice.receiverEmail}}</td>
+        <td>{{notice.content}}</td>
+        <td>{{notice.timestamp}}</td>
+      </tr>
 
-  <hr>
+    </table>
 
-  <h3>Message History</h3>
-
-  <table border="1">
-
-    <tr>
-      <th>Sender</th>
-      <th>Receiver</th>
-      <th>Message</th>
-      <th>Time</th>
-    </tr>
-
-    <tr *ngFor="let notice of noticeHistory">
-
-      <td>{{notice.senderEmail}}</td>
-      <td>{{notice.receiverEmail}}</td>
-      <td>{{notice.content}}</td>
-      <td>{{notice.timestamp}}</td>
-
-    </tr>
-
-  </table>
-
-</div>
+  </div>
 
 
-<!-- ================= TAB C ================= -->
+  <!-- ================= TAB C ================= -->
+  <div *ngIf="activeTab === 'C'" class="card">
 
-<div *ngIf="activeTab === 'C'">
+    <h3>Analytics Overview</h3>
 
-  <h3>Dashboard Analytics</h3>
+    <div class="stats">
 
-  <table border="1">
+      <div class="stat-card blue">
+        <h4>Total Admins</h4>
+        <p>{{totalAdmins}}</p>
+      </div>
 
-    <tr>
-      <th>Total Admins</th>
-      <th>Total Users</th>
-      <th>Pending Users</th>
-    </tr>
+      <div class="stat-card green">
+        <h4>Total Users</h4>
+        <p>{{totalUsers}}</p>
+      </div>
 
-    <tr>
-      <td>{{totalAdmins}}</td>
-      <td>{{totalUsers}}</td>
-      <td>{{pendingCount}}</td>
-    </tr>
+      <div class="stat-card orange">
+        <h4>Pending Users</h4>
+        <p>{{pendingCount}}</p>
+      </div>
 
-  </table>
+    </div>
+
+  </div>
+
+  <!-- LOGOUT -->
+  <button class="logout" (click)="logout()">Logout</button>
 
 </div>
-
-
-<hr>
-
-<button (click)="logout()">Logout</button>
