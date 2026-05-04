@@ -16,7 +16,6 @@ export class DashboardComponent implements OnInit {
   activeTab = 'D';
 
   noticeMessage = '';
-
   selectedGroup = 'All Users';
 
   groups = ['Admin', 'User', 'All Users'];
@@ -26,21 +25,23 @@ export class DashboardComponent implements OnInit {
   currentUserEmail = '';
 
   chart: any;
-
   timeoutHandle: any;
 
   constructor(private router: Router) {}
 
   ngOnInit() {
-
     this.currentUserEmail =
       localStorage.getItem('email') || '';
-
   }
+
+  // ================= TAB SWITCH =================
 
   setTab(tab: string) {
 
     this.activeTab = tab;
+
+    // ✅ STOP timer when leaving Tab F
+    clearTimeout(this.timeoutHandle);
 
     if (tab === 'F') {
 
@@ -52,38 +53,36 @@ export class DashboardComponent implements OnInit {
 
   }
 
-  startSessionTimeout() {
+  // ================= SESSION TIMER =================
 
-    clearTimeout(this.timeoutHandle);
+  startSessionTimeout() {
 
     this.timeoutHandle = setTimeout(() => {
 
-      alert('Session expired (User Tab F)');
-
-      this.logout();
+      // ✅ ONLY logout if still in Tab F
+      if (this.activeTab === 'F') {
+        alert('Session expired (User Tab F)');
+        this.logout();
+      }
 
     }, 20000);
 
   }
 
+  // ================= SEND MESSAGE =================
+
   sendNotice() {
 
     if (!this.noticeMessage.trim()) {
-
       alert('Message cannot be empty');
-
       return;
-
     }
 
     const messageObj = {
 
       senderEmail: this.currentUserEmail,
-
       receiverGroup: this.selectedGroup,
-
       content: this.noticeMessage,
-
       timestamp: new Date()
 
     };
@@ -93,6 +92,8 @@ export class DashboardComponent implements OnInit {
     this.noticeMessage = '';
 
   }
+
+  // ================= CHART =================
 
   loadChart() {
 
@@ -107,32 +108,46 @@ export class DashboardComponent implements OnInit {
 
     if (!ctx) return;
 
+    // ✅ CALCULATE PROPER VALUES
+    const sent = this.messages.filter(
+      m => m.senderEmail === this.currentUserEmail
+    ).length;
+
+    const received = this.messages.filter(
+      m => m.senderEmail !== this.currentUserEmail
+    ).length;
+
     this.chart = new Chart(ctx, {
 
-      type: 'pie',
+      type: 'doughnut',   // 🔥 better UI
 
       data: {
-
         labels: ['Sent Messages', 'Received Messages'],
-
         datasets: [
           {
-            data: [this.messages.length, 3]
+            data: [sent, received]
           }
         ]
+      },
 
+      options: {
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
       }
 
     });
 
   }
 
+  // ================= LOGOUT =================
+
   logout() {
 
     localStorage.removeItem('activeSession');
-
     sessionStorage.removeItem('activeTab');
-
     localStorage.clear();
 
     this.router.navigate(['/login']);
