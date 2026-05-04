@@ -107,37 +107,31 @@ export class AdminDashboardComponent implements OnInit {
 
   }
 
-  sendNotice() {
+sendNotice() {
 
-    if (!this.noticeMessage.trim()) return;
+  if (!this.noticeMessage.trim()) return;
 
-    const notice = {
+  const notice = {
+    id: 0,
+    senderEmail: 'admin@gmail.com',
+    receiverEmail:
+      this.selectedReceiver === 'All Users'
+        ? 'all users'
+        : this.selectedReceiver.toLowerCase(),
+    content: this.noticeMessage,
+    timestamp: new Date().toISOString()
+  };
 
-      id: 0,
-      senderEmail: 'admin@gmail.com',
-      receiverEmail: this.selectedReceiver.toLowerCase(),
-      content: this.noticeMessage,
-      timestamp: new Date().toISOString()
-
-    };
-
-    this.http
-      .post('http://localhost:5000/api/chat/send', notice)
-      .subscribe({
-        next: () => {
-
-          this.noticeMessage = '';
-          this.loadNoticeHistory();
-
-        },
-        error: err => {
-
-          console.error('Notice send failed', err);
-
-        }
-      });
-
-  }
+  this.http
+    .post('http://localhost:5000/api/chat/send', notice)
+    .subscribe({
+      next: () => {
+        this.noticeMessage = '';
+        this.loadNoticeHistory();
+      },
+      error: err => console.error(err)
+    });
+}
 
   loadNoticeHistory() {
 

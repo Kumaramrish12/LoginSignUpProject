@@ -29,11 +29,11 @@ public async Task<IActionResult> SendMessage(Message message)
         message.Id = 0;
         message.Timestamp = DateTime.UtcNow;
 
-        // 🔥 FIX: BROADCAST TO ALL USERS FROM DB
+        // 🔥 SEND TO ALL USERS
         if (!string.IsNullOrEmpty(message.ReceiverEmail) &&
             message.ReceiverEmail.ToLower() == "all users")
         {
-            var users = _context.Users.ToList(); // 🔥 REAL USERS
+            var users = _context.Users.ToList(); // DB users
 
             foreach (var user in users)
             {
@@ -50,16 +50,17 @@ public async Task<IActionResult> SendMessage(Message message)
         }
         else
         {
+            // 🔹 SINGLE USER MESSAGE
             _context.Messages.Add(message);
         }
 
         await _context.SaveChangesAsync();
 
-        return Ok("Message stored successfully");
+        return Ok("Message sent successfully");
     }
     catch (Exception ex)
     {
-        return StatusCode(500, ex.Message);
+        return StatusCode(500, ex.InnerException?.Message ?? ex.Message);
     }
 }
 
