@@ -36,9 +36,16 @@ export class LoginComponent {
 
         console.log("LOGIN RESPONSE:", res);
 
+        // ✅ STORE USER DATA
         localStorage.setItem('email', res.email);
         localStorage.setItem('role', res.role);
 
+        // 🔥 ADD SESSION CONTROL (NEW)
+        const sessionId = Date.now().toString();
+        localStorage.setItem('activeSession', sessionId);
+        sessionStorage.setItem('currentSession', sessionId);
+
+        // ✅ NAVIGATION
         if (res.role === 'Admin')
           this.router.navigate(['/admin-dashboard']);
         else
@@ -48,7 +55,6 @@ export class LoginComponent {
       error: err => {
 
         console.log("LOGIN ERROR:", err);
-
         alert('Invalid credentials or approval pending');
 
       }

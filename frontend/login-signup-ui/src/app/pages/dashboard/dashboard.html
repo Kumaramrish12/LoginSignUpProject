@@ -14,7 +14,14 @@
 
     <h3>Notice Board</h3>
 
-    <div class="chat-container">
+    <!-- 🔥 ADDED BUTTONS -->
+    <div style="text-align:right; margin-bottom:10px;">
+      <button (click)="printNotices()">Print</button>
+      <button (click)="downloadPDF()">PDF</button>
+    </div>
+
+    <!-- 🔥 ADDED ID ONLY -->
+    <div id="noticeBoard" class="chat-container">
 
       <div *ngFor="let msg of messages">
 
