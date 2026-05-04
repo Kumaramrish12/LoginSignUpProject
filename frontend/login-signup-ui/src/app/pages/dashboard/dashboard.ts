@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import Chart from 'chart.js/auto';
 
 @Component({
@@ -17,88 +18,96 @@ export class DashboardComponent implements OnInit {
 
   noticeMessage = '';
   selectedGroup = 'All Users';
-
   groups = ['Admin', 'User', 'All Users'];
 
   messages: any[] = [];
-
   currentUserEmail = '';
 
   chart: any;
   timeoutHandle: any;
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private http: HttpClient
+  ) {}
 
   ngOnInit() {
+
     this.currentUserEmail =
       localStorage.getItem('email') || '';
-  }
 
-  // ================= TAB SWITCH =================
+    this.loadMessages(); // 🔥 IMPORTANT
+
+  }
 
   setTab(tab: string) {
 
     this.activeTab = tab;
 
-    // ✅ STOP timer when leaving Tab F
-    clearTimeout(this.timeoutHandle);
-
     if (tab === 'F') {
-
       this.startSessionTimeout();
-
-      setTimeout(() => this.loadChart(), 200);
-
+      setTimeout(() => this.loadChart(), 300);
+    } else {
+      clearTimeout(this.timeoutHandle); // 🔥 STOP LOGOUT
     }
+  }
+
+  // 🔥 FETCH FROM BACKEND
+  loadMessages() {
+
+    this.http
+      .get<any[]>('http://localhost:5000/api/chat/messages')
+      .subscribe(res => {
+
+        this.messages = res.filter(msg =>
+          msg.receiverEmail === this.currentUserEmail ||
+          msg.senderEmail === this.currentUserEmail
+        );
+
+      });
 
   }
 
-  // ================= SESSION TIMER =================
-
-  startSessionTimeout() {
-
-    this.timeoutHandle = setTimeout(() => {
-
-      // ✅ ONLY logout if still in Tab F
-      if (this.activeTab === 'F') {
-        alert('Session expired (User Tab F)');
-        this.logout();
-      }
-
-    }, 20000);
-
-  }
-
-  // ================= SEND MESSAGE =================
-
+  // 🔥 SEND MESSAGE
   sendNotice() {
 
-    if (!this.noticeMessage.trim()) {
-      alert('Message cannot be empty');
-      return;
-    }
+    if (!this.noticeMessage.trim()) return;
 
-    const messageObj = {
-
+    const message = {
       senderEmail: this.currentUserEmail,
-      receiverGroup: this.selectedGroup,
-      content: this.noticeMessage,
-      timestamp: new Date()
-
+      receiverEmail: this.selectedGroup.toLowerCase(), // IMPORTANT
+      content: this.noticeMessage
     };
 
-    this.messages.push(messageObj);
+    this.http
+      .post('http://localhost:5000/api/chat/send', message)
+      .subscribe(() => {
 
-    this.noticeMessage = '';
+        this.noticeMessage = '';
+        this.loadMessages(); // 🔥 refresh
+
+      });
 
   }
 
-  // ================= CHART =================
+  // 🔥 COUNTS FIX
+  getSentCount() {
+    return this.messages.filter(
+      m => m.senderEmail === this.currentUserEmail
+    ).length;
+  }
 
+  getReceivedCount() {
+    return this.messages.filter(
+      m => m.senderEmail !== this.currentUserEmail
+    ).length;
+  }
+
+  // 🔥 CHART FIX
   loadChart() {
 
     const canvas =
-      document.getElementById('userChart') as HTMLCanvasElement | null;
+      document.getElementById('userChart') as HTMLCanvasElement;
 
     if (!canvas) return;
 
@@ -106,52 +115,44 @@ export class DashboardComponent implements OnInit {
 
     const ctx = canvas.getContext('2d');
 
-    if (!ctx) return;
-
-    // ✅ CALCULATE PROPER VALUES
-    const sent = this.messages.filter(
-      m => m.senderEmail === this.currentUserEmail
-    ).length;
-
-    const received = this.messages.filter(
-      m => m.senderEmail !== this.currentUserEmail
-    ).length;
-
-    this.chart = new Chart(ctx, {
-
-      type: 'doughnut',   // 🔥 better UI
-
+    this.chart = new Chart(ctx!, {
+      type: 'doughnut',
       data: {
-        labels: ['Sent Messages', 'Received Messages'],
+        labels: ['Sent', 'Received'],
         datasets: [
           {
-            data: [sent, received]
+            data: [
+              this.getSentCount(),
+              this.getReceivedCount()
+            ],
+            backgroundColor: ['#3b82f6', '#f59e0b']
           }
         ]
       },
-
       options: {
-        plugins: {
-          legend: {
-            position: 'bottom'
-          }
-        }
+        responsive: true,
+        cutout: '60%' // smaller donut
+      }
+    });
+  }
+
+  // 🔥 LOGOUT ONLY TAB F
+  startSessionTimeout() {
+
+    clearTimeout(this.timeoutHandle);
+
+    this.timeoutHandle = setTimeout(() => {
+
+      if (this.activeTab === 'F') {
+        alert('Session expired (User Tab F)');
+        this.logout();
       }
 
-    });
-
+    }, 20000);
   }
-
-  // ================= LOGOUT =================
 
   logout() {
-
-    localStorage.removeItem('activeSession');
-    sessionStorage.removeItem('activeTab');
     localStorage.clear();
-
     this.router.navigate(['/login']);
-
   }
-
 }

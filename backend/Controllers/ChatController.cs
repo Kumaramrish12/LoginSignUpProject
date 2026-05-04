@@ -18,64 +18,50 @@ namespace LoginSignupAPI.Controllers
 
         // ================= SEND MESSAGE =================
 
-        [HttpPost("send")]
-        public async Task<IActionResult> SendMessage(Message message)
+[HttpPost("send")]
+public async Task<IActionResult> SendMessage(Message message)
+{
+    try
+    {
+        if (message == null)
+            return BadRequest("Invalid message");
+
+        message.Id = 0;
+        message.Timestamp = DateTime.UtcNow;
+
+        // 🔥 FIX: BROADCAST TO ALL USERS FROM DB
+        if (!string.IsNullOrEmpty(message.ReceiverEmail) &&
+            message.ReceiverEmail.ToLower() == "all users")
         {
-            try
+            var users = _context.Users.ToList(); // 🔥 REAL USERS
+
+            foreach (var user in users)
             {
-                if (message == null)
-                    return BadRequest("Invalid message");
-
-                // Ignore client-provided ID (EF auto-generates it)
-                message.Id = 0;
-
-                // Always set timestamp from server
-                message.Timestamp = DateTime.UtcNow;
-
-
-                // ================= BROADCAST SUPPORT =================
-
-                if (!string.IsNullOrEmpty(message.ReceiverEmail) &&
-                    message.ReceiverEmail.ToLower() == "all")
+                var msg = new Message
                 {
-                    var users = new List<string>
-                    {
-                        "rahul@test.com",
-                        "admin@test.com",
-                        "royamrish.18@gmail.com"
-                    };
+                    SenderEmail = message.SenderEmail,
+                    ReceiverEmail = user.Email,
+                    Content = message.Content,
+                    Timestamp = DateTime.UtcNow
+                };
 
-                    foreach (var user in users)
-                    {
-                        var msg = new Message
-                        {
-                            SenderEmail = message.SenderEmail,
-                            ReceiverEmail = user,
-                            Content = message.Content,
-                            Timestamp = DateTime.UtcNow
-                        };
-
-                        _context.Messages.Add(msg);
-                    }
-                }
-                else
-                {
-                    _context.Messages.Add(message);
-                }
-
-
-                await _context.SaveChangesAsync();
-
-                return Ok("Message stored successfully");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(
-                    500,
-                    ex.InnerException?.Message ?? ex.Message
-                );
+                _context.Messages.Add(msg);
             }
         }
+        else
+        {
+            _context.Messages.Add(message);
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok("Message stored successfully");
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, ex.Message);
+    }
+}
 
 
         // ================= GET ALL MESSAGES =================
