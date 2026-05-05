@@ -28,21 +28,21 @@ export class LoginComponent {
       Password: this.Password
     };
 
-    console.log("LOGIN REQUEST:", body);
-
     this.authService.login(body).subscribe({
 
       next: (res: any) => {
 
-        console.log("LOGIN RESPONSE:", res);
+        // ✅ STORE USER PER TAB (IMPORTANT FIX)
+        sessionStorage.setItem('email', res.email);
+        sessionStorage.setItem('role', res.role);
 
-        // ✅ STORE USER DATA
-        localStorage.setItem('email', res.email);
-        localStorage.setItem('role', res.role);
-
-        // 🔥 ADD SESSION CONTROL (NEW)
+        // ✅ SESSION CONTROL (PER USER)
         const sessionId = Date.now().toString();
-        localStorage.setItem('activeSession', sessionId);
+
+        // store session per user (NOT global)
+        localStorage.setItem('session_' + res.email, sessionId);
+
+        // store session for this tab
         sessionStorage.setItem('currentSession', sessionId);
 
         // ✅ NAVIGATION
@@ -53,14 +53,9 @@ export class LoginComponent {
       },
 
       error: err => {
-
-        console.log("LOGIN ERROR:", err);
         alert('Invalid credentials or approval pending');
-
       }
 
     });
-
   }
-
 }

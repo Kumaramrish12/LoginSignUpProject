@@ -23,7 +23,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   noticeMessage = '';
   selectedGroup = 'All Users';
 
-  // 🔥 UPDATED (added usersList)
   groups = ['Admin', 'User', 'All Users'];
   usersList: string[] = [];
 
@@ -42,18 +41,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
 
-    this.currentUserEmail = localStorage.getItem('email') || '';
+    // ✅ FIX: use sessionStorage (NOT localStorage)
+    this.currentUserEmail = sessionStorage.getItem('email') || '';
 
-    this.checkSession();
+    if (!this.currentUserEmail) {
+      alert('Session expired. Please login again.');
+      this.logout();
+      return;
+    }
+
+    // ✅ NEW SESSION FIX
+    this.checkSessionConflict();
 
     this.loadMessages();
-
-    this.loadUsers(); // 🔥 NEW
-
+    this.loadUsers();
     this.startSignalR();
 
     this.refreshInterval = setInterval(() => {
-      this.checkSession();
       this.loadMessages();
     }, 3000);
   }
@@ -65,30 +69,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
     clearInterval(this.refreshInterval);
   }
 
-  // ================= LOAD USERS (NEW) =================
+  // ================= SESSION FIX =================
 
-loadUsers() {
-  this.http.get<string[]>('http://localhost:5000/api/users')
-    .subscribe(res => {
+  checkSessionConflict() {
 
-      console.log("Users:", res);
-
-      this.usersList = res.filter(
-        email => email !== this.currentUserEmail
-      );
-
-    });
-}
-  // ================= SESSION =================
-
-  checkSession() {
-    const activeSession = localStorage.getItem('activeSession');
+    const email = sessionStorage.getItem('email');
     const currentSession = sessionStorage.getItem('currentSession');
 
-    if (activeSession !== currentSession) {
-      alert('Logged out: another session detected');
-      this.logout();
-    }
+    window.addEventListener('storage', (event) => {
+
+      if (event.key === 'session_' + email) {
+
+        const latestSession = localStorage.getItem('session_' + email);
+
+        if (currentSession !== latestSession) {
+          alert('Session expired (opened in another tab)');
+          this.logout();
+        }
+      }
+    });
+  }
+
+  // ================= LOAD USERS =================
+
+  loadUsers() {
+    this.http.get<string[]>('http://localhost:5000/api/users')
+      .subscribe(res => {
+
+        this.usersList = res.filter(
+          email => email !== this.currentUserEmail
+        );
+
+      });
   }
 
   // ================= SIGNALR =================
@@ -131,11 +143,9 @@ loadUsers() {
 
     let receiver = this.selectedGroup;
 
-    // 🔥 FIX GROUP MAPPING
     if (receiver === 'User') receiver = 'users';
     else if (receiver === 'Admin') receiver = 'admins';
     else if (receiver === 'All Users') receiver = 'all users';
-    // else → direct email (NO CHANGE)
 
     const msg = {
       senderEmail: this.currentUserEmail,
@@ -163,21 +173,20 @@ loadUsers() {
       clearTimeout(this.timeoutHandle);
     }
   }
+
   startSessionTimeout() {
 
-  clearTimeout(this.timeoutHandle);
+    clearTimeout(this.timeoutHandle);
 
-  this.timeoutHandle = setTimeout(() => {
+    this.timeoutHandle = setTimeout(() => {
 
-    if (this.activeTab === 'F') {
+      if (this.activeTab === 'F') {
+        alert('Session expired (User Tab F)');
+        this.logout();
+      }
 
-      alert('Session expired (User Tab F)');
-      this.logout();
-
-    }
-
-  }, 20000); // 20 seconds
-}
+    }, 20000);
+  }
 
   // ================= ANALYTICS =================
 
