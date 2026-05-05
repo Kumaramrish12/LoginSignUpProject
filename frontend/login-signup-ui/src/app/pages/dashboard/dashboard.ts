@@ -110,13 +110,12 @@ loadMessages() {
     .subscribe(res => {
 
       this.messages = res.filter(m =>
-        m.receiverEmail === this.currentUserEmail ||
-        m.senderEmail === this.currentUserEmail
+        m.senderEmail === this.currentUserEmail ||
+        m.receiverEmail === this.currentUserEmail
       );
 
     });
 }
-
 
 
   // ================= SEND MESSAGE =================

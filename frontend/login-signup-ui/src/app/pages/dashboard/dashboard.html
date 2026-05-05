@@ -14,13 +14,12 @@
 
     <h3>Notice Board</h3>
 
-    <!-- 🔥 ADDED BUTTONS -->
+    <!-- 🔥 BUTTONS -->
     <div style="text-align:right; margin-bottom:10px;">
       <button (click)="printNotices()">Print</button>
       <button (click)="downloadPDF()">PDF</button>
     </div>
 
-    <!-- 🔥 ADDED ID ONLY -->
     <div id="noticeBoard" class="chat-container">
 
       <div *ngFor="let msg of messages">
@@ -29,7 +28,7 @@
         <div *ngIf="msg.senderEmail !== currentUserEmail"
              class="message-card received">
 
-          📩 <b>{{msg.senderEmail}}</b> → {{msg.receiverGroup}} <br>
+          📩 <b>{{msg.senderEmail}}</b> → You <br>
           {{msg.content}} <br>
           <small>{{msg.timestamp}}</small>
 
@@ -39,7 +38,7 @@
         <div *ngIf="msg.senderEmail === currentUserEmail"
              class="message-card sent">
 
-          📤 <b>You</b> → {{msg.receiverGroup}} <br>
+          📤 <b>You</b> → {{msg.receiverEmail}} <br>
           {{msg.content}} <br>
           <small>{{msg.timestamp}}</small>
 
@@ -78,7 +77,13 @@
 
       <tr *ngFor="let msg of messages">
         <td>{{msg.senderEmail}}</td>
-        <td>{{msg.receiverGroup}}</td>
+
+        <td>
+          {{ msg.senderEmail === currentUserEmail 
+              ? ('You → ' + msg.receiverEmail) 
+              : (msg.senderEmail + ' → You') }}
+        </td>
+
         <td>{{msg.content}}</td>
         <td>{{msg.timestamp}}</td>
       </tr>
@@ -92,7 +97,6 @@
 
     <h3>Analytics Dashboard</h3>
 
-    <!-- STATS -->
     <div class="stats">
 
       <div class="stat-card blue">
@@ -112,7 +116,6 @@
 
     </div>
 
-    <!-- CHART -->
     <div class="chart-box">
       <canvas id="userChart" width="280" height="280"></canvas>
     </div>
