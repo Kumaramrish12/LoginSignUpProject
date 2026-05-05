@@ -231,51 +231,134 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // ================= PRINT FUNCTION (NEW) =================
 
-  printNotices() {
+ printNotices() {
 
-    const content = document.getElementById('noticeBoard');
+  const content = document.getElementById('noticeBoard');
+  if (!content) return;
 
-    if (!content) return;
+  const printWindow = window.open('', '', 'width=900,height=700');
 
-    const printWindow = window.open('', '', 'width=900,height=700');
+  printWindow?.document.write(`
+    <html>
+    <head>
+      <title>Notice Board</title>
 
-    printWindow?.document.write(`
-      <html>
-        <head>
-          <title>Notice Board</title>
-        </head>
-        <body>
-          ${content.innerHTML}
-        </body>
-      </html>
-    `);
+      <style>
+        body {
+          font-family: Arial;
+          padding: 20px;
+          background: #fff;
+        }
 
-    printWindow?.document.close();
-    printWindow?.print();
-  }
+        h2 {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #000;
+          padding-bottom: 10px;
+        }
 
+        /* CHAT CONTAINER BORDER */
+        .chat-container {
+          border: 2px solid #000;
+          padding: 15px;
+          border-radius: 10px;
+        }
+
+        /* MESSAGE BOX */
+        .message-card {
+          padding: 10px;
+          margin: 10px;
+          border-radius: 10px;
+          width: 60%;
+          clear: both;
+          border: 1px solid #000; /* 🔥 BORDER ADDED */
+        }
+
+        /* RECEIVED (LEFT) */
+        .received {
+          background: #f3e6b3;
+          float: left;
+          text-align: left;
+        }
+
+        /* SENT (RIGHT) */
+        .sent {
+          background: #cfe2ff;
+          float: right;
+          text-align: right;
+        }
+
+        small {
+          font-size: 10px;
+          color: gray;
+        }
+
+        /* CLEAR FLOAT FIX */
+        .clearfix::after {
+          content: "";
+          display: block;
+          clear: both;
+        }
+
+      </style>
+
+    </head>
+
+    <body>
+
+      <h2>Notice Board</h2>
+
+      <div class="chat-container clearfix">
+        ${content.innerHTML}
+      </div>
+
+    </body>
+    </html>
+  `);
+
+  printWindow?.document.close();
+  printWindow?.print();
+}
   // ================= PDF FUNCTION (NEW) =================
 
-  downloadPDF() {
+downloadPDF() {
 
-    const data = document.getElementById('noticeBoard');
+  const data = document.getElementById('noticeBoard');
+  if (!data) return;
 
-    if (!data) return;
+  // 🔥 FIX SCROLL ISSUE
+  data.style.maxHeight = 'none';
+  data.style.overflow = 'visible';
 
-    html2canvas(data).then(canvas => {
+  html2canvas(data, {
+    scale: 2,
+    useCORS: true,
+    scrollY: -window.scrollY
+  }).then(canvas => {
 
-      const imgWidth = 210;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
+    const imgWidth = 210;
+    const pageHeight = 295;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
 
-      const contentDataURL = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
+    let heightLeft = imgHeight;
+    let position = 0;
 
-      pdf.addImage(contentDataURL, 'PNG', 0, 10, imgWidth, imgHeight);
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
 
-      pdf.save('NoticeBoard.pdf');
-    });
-  }
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save('NoticeBoard.pdf');
+  });
+}
 
   // ================= LOGOUT =================
 

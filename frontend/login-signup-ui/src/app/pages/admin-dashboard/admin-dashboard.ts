@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import Chart from 'chart.js/auto';   // ✅ ADDED (for chart)
+import { Console } from 'console';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -164,6 +165,7 @@ sendNotice() {
   // ✅ NEW: SMALL DOUGHNUT CHART (UI ONLY)
 
   loadChart() {
+    
 
     const canvas = document.getElementById('adminChart') as HTMLCanvasElement;
     if (!canvas) return;
@@ -184,7 +186,7 @@ sendNotice() {
           {
             data: [this.totalAdmins, this.totalUsers, this.pendingCount]
           }
-        ]
+        ] 
       },
       options: {
         responsive: true,
@@ -195,7 +197,8 @@ sendNotice() {
         }
       }
     });
-
+    
+    
   }
 
   // ================= LOGOUT =================
