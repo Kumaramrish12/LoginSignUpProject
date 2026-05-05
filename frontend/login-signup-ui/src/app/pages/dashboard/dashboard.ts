@@ -248,13 +248,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ================= PDF =================
 downloadPDF() {
 
+  console.log("🔥 PDF CLICKED");
+
   const data = document.getElementById('noticeBoard');
-  if (!data) return;
+  if (!data) {
+    console.error("❌ noticeBoard not found");
+    return;
+  }
 
-  html2canvas(data, { scale: 2 }).then(canvas => {
+  // ✅ FIX: since chat-container = same element
+  const scrollContainer = data as HTMLElement;
 
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 295; // A4 height in mm
+  // store original styles
+  const originalMaxHeight = scrollContainer.style.maxHeight;
+  const originalOverflow = scrollContainer.style.overflow;
+
+  // 🔥 REMOVE SCROLL LIMIT
+  scrollContainer.style.maxHeight = 'none';
+  scrollContainer.style.overflow = 'visible';
+
+  html2canvas(data, {
+    scale: 2,
+    useCORS: true
+  }).then(canvas => {
+
+    console.log("✅ CANVAS CREATED");
+
+    const imgWidth = 210;      // A4 width
+    const pageHeight = 295;    // A4 height
     const imgHeight = canvas.height * imgWidth / canvas.width;
 
     const imgData = canvas.toDataURL('image/png');
@@ -264,11 +285,11 @@ downloadPDF() {
     let heightLeft = imgHeight;
     let position = 0;
 
-    // FIRST PAGE
+    // ✅ FIRST PAGE
     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
     heightLeft -= pageHeight;
 
-    // ADD EXTRA PAGES
+    // ✅ MULTIPLE PAGES
     while (heightLeft > 0) {
 
       position = heightLeft - imgHeight;
@@ -279,10 +300,29 @@ downloadPDF() {
       heightLeft -= pageHeight;
     }
 
-    pdf.save('NoticeBoard.pdf');
+    console.log("✅ PDF READY");
+
+    // 🔥 FORCE DOWNLOAD (NO BLOCK)
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'NoticeBoard.pdf';
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    console.log("✅ PDF DOWNLOADED");
+
+    // ✅ RESTORE ORIGINAL UI
+    scrollContainer.style.maxHeight = originalMaxHeight;
+    scrollContainer.style.overflow = originalOverflow;
+
+  }).catch(err => {
+    console.error("❌ PDF ERROR:", err);
   });
 }
-
   // ================= LOGOUT =================
 
   logout() {
