@@ -246,24 +246,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // ================= PDF =================
+downloadPDF() {
 
-  downloadPDF() {
+  const data = document.getElementById('noticeBoard');
+  if (!data) return;
 
-    const data = document.getElementById('noticeBoard');
-    if (!data) return;
+  html2canvas(data, { scale: 2 }).then(canvas => {
 
-    html2canvas(data, { scale: 2 }).then(canvas => {
+    const imgWidth = 210; // A4 width in mm
+    const pageHeight = 295; // A4 height in mm
+    const imgHeight = canvas.height * imgWidth / canvas.width;
 
-      const imgWidth = 210;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
+    const imgData = canvas.toDataURL('image/png');
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdf = new jsPDF('p', 'mm', 'a4');
 
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 10, imgWidth, imgHeight);
+    let heightLeft = imgHeight;
+    let position = 0;
 
-      pdf.save('NoticeBoard.pdf');
-    });
-  }
+    // FIRST PAGE
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    // ADD EXTRA PAGES
+    while (heightLeft > 0) {
+
+      position = heightLeft - imgHeight;
+
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save('NoticeBoard.pdf');
+  });
+}
 
   // ================= LOGOUT =================
 

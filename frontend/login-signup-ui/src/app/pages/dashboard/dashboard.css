@@ -154,3 +154,25 @@ th, td {
 .chart-box canvas {
   max-width: 100%;
 }
+/* ✅ SCROLLABLE TABLE */
+.table-container {
+  max-height: 400px;   /* control height */
+  overflow-y: auto;
+  border-radius: 10px;
+}
+
+/* optional: smooth scroll look */
+.table-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+table thead th {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}
