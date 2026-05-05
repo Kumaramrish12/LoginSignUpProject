@@ -52,8 +52,17 @@
     <div class="input-area">
       <input placeholder="Enter message" [(ngModel)]="noticeMessage">
 
+      <!-- ✅ UPDATED DROPDOWN -->
       <select [(ngModel)]="selectedGroup">
+
+        <!-- EXISTING OPTIONS -->
         <option *ngFor="let g of groups">{{g}}</option>
+
+        <!-- 🔥 NEW: DIRECT USERS -->
+        <option *ngFor="let user of usersList">
+          {{user}}
+        </option>
+
       </select>
 
       <button (click)="sendNotice()">Send</button>

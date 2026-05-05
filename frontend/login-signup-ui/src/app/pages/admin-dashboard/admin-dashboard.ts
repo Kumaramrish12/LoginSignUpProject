@@ -2,15 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import Chart from 'chart.js/auto';   // ✅ ADDED (for chart)
-import { Console } from 'console';
+import Chart from 'chart.js/auto';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './admin-dashboard.html',
-  styleUrls: ['./admin-dashboard.css']   // ✅ make sure comma is present
+  styleUrls: ['./admin-dashboard.css']
 })
 export class AdminDashboardComponent implements OnInit {
 
@@ -20,6 +19,7 @@ export class AdminDashboardComponent implements OnInit {
 
   noticeMessage = '';
   selectedReceiver = 'All Users';
+
   users: any[] = [];
   noticeHistory: any[] = [];
 
@@ -27,7 +27,11 @@ export class AdminDashboardComponent implements OnInit {
   totalUsers = 0;
   pendingCount = 0;
 
-  chart: any;   // ✅ ADDED (for chart instance)
+  chart: any;
+
+  // 🔥 NEW (for direct users)
+  usersList: string[] = [];
+  currentUserEmail = '';
 
   constructor(private http: HttpClient) {}
 
@@ -36,6 +40,25 @@ export class AdminDashboardComponent implements OnInit {
     this.loadAllUsers();
     this.loadAnalytics();
     this.loadNoticeHistory();
+
+    // 🔥 NEW
+    this.currentUserEmail = localStorage.getItem('email') || '';
+    this.loadUsers();
+  }
+
+  // ================= NEW: LOAD USERS =================
+
+  loadUsers() {
+    this.http.get<string[]>('http://localhost:5000/api/users')
+      .subscribe(res => {
+
+        console.log("Admin Users:", res);
+
+        this.usersList = res.filter(
+          email => email !== this.currentUserEmail
+        );
+
+      });
   }
 
   // ================= TAB SWITCH =================
@@ -43,7 +66,6 @@ export class AdminDashboardComponent implements OnInit {
   setTab(tab: string) {
     this.activeTab = tab;
 
-    // ✅ ONLY UI ADDITION (no logic change)
     if (tab === 'C') {
       setTimeout(() => this.loadChart(), 200);
     }
@@ -52,120 +74,99 @@ export class AdminDashboardComponent implements OnInit {
   // ================= TAB A =================
 
   loadPendingUsers() {
-
     this.http
       .get<any[]>('http://localhost:5000/api/admin/pending-users')
       .subscribe(res => {
-
         console.log('Pending Users:', res);
         this.pendingUsers = res;
-
       });
-
   }
 
   approveUser(user: any) {
-
     this.http
-      .put(
-        `http://localhost:5000/api/admin/approve-user/${user._id}`,
-        {}
-      )
+      .put(`http://localhost:5000/api/admin/approve-user/${user._id}`, {})
       .subscribe(() => {
-
         this.loadPendingUsers();
         this.loadAnalytics();
-
       });
-
   }
 
   rejectUser(user: any) {
-
     this.http
-      .delete(
-        `http://localhost:5000/api/admin/delete-user/${user._id}`
-      )
+      .delete(`http://localhost:5000/api/admin/delete-user/${user._id}`)
       .subscribe(() => {
-
         this.loadPendingUsers();
         this.loadAnalytics();
-
       });
-
   }
 
   // ================= TAB B =================
 
   loadAllUsers() {
-
     this.http
       .get<any[]>('http://localhost:5000/api/chat/messages')
       .subscribe({
         next: () => {},
         error: () => {}
       });
-
   }
 
-sendNotice() {
+  sendNotice() {
 
-  console.log("🔥 SEND CLICKED");
+    console.log("🔥 SEND CLICKED");
 
-  if (!this.noticeMessage.trim()) return;
+    if (!this.noticeMessage.trim()) return;
 
-  const notice = {
-    senderEmail: 'admin@gmail.com',
-    receiverEmail:
-      this.selectedReceiver === 'All Users'
-        ? 'all users'
-        : this.selectedReceiver.toLowerCase(),
-    content: this.noticeMessage
-  };
+    let receiver = this.selectedReceiver;
 
-  this.http.post('http://localhost:5000/api/chat/send', notice)
-    .subscribe({
-      next: () => {
-        console.log("✅ API CALLED SUCCESS");
-      },
-      error: (err: any) => {
-        console.error("❌ API ERROR:", err);
-      }
-    });
-}
+    // 🔥 FIXED LOGIC
+    if (receiver === 'All Users') receiver = 'all users';
+    else if (receiver === 'Admins') receiver = 'admins';
+    else if (receiver === 'Users') receiver = 'users';
+    // else → direct email (NO CHANGE)
+
+    const notice = {
+      senderEmail: this.currentUserEmail || 'admin@gmail.com',
+      receiverEmail: receiver,
+      content: this.noticeMessage
+    };
+
+    console.log("Sending:", notice);
+
+    this.http.post('http://localhost:5000/api/chat/send', notice)
+      .subscribe({
+        next: () => {
+          console.log("✅ API CALLED SUCCESS");
+          this.noticeMessage = '';
+          this.loadNoticeHistory();
+        },
+        error: (err: any) => {
+          console.error("❌ API ERROR:", err);
+        }
+      });
+  }
 
   loadNoticeHistory() {
-
     this.http
       .get<any[]>('http://localhost:5000/api/chat/messages')
       .subscribe(res => {
-
         this.noticeHistory = res;
-
       });
-
   }
 
   // ================= TAB C =================
 
   loadAnalytics() {
-
     this.http
       .get<any>('http://localhost:5000/api/dashboard/total-users')
       .subscribe(res => {
-
         this.totalAdmins = res.totalAdmins;
         this.totalUsers = res.totalUsers;
         this.pendingCount = res.pendingUsers;
-
       });
-
   }
 
-  // ✅ NEW: SMALL DOUGHNUT CHART (UI ONLY)
-
   loadChart() {
-    
 
     const canvas = document.getElementById('adminChart') as HTMLCanvasElement;
     if (!canvas) return;
@@ -173,7 +174,6 @@ sendNotice() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // destroy old chart if exists
     if (this.chart) {
       this.chart.destroy();
     }
@@ -186,7 +186,7 @@ sendNotice() {
           {
             data: [this.totalAdmins, this.totalUsers, this.pendingCount]
           }
-        ] 
+        ]
       },
       options: {
         responsive: true,
@@ -197,17 +197,12 @@ sendNotice() {
         }
       }
     });
-    
-    
   }
 
   // ================= LOGOUT =================
 
   logout() {
-
     localStorage.clear();
     location.href = '/login';
-
   }
-
 }

@@ -141,3 +141,16 @@ th, td {
   padding: 8px 15px;
   border-radius: 6px;
 }
+.table-container {
+  max-height: 300px;   /* adjust height as you want */
+  overflow-y: auto;
+  border-radius: 8px;
+}
+.chart-box {
+  width: 300px;
+  margin: 20px auto;
+}
+
+.chart-box canvas {
+  max-width: 100%;
+}

@@ -6,7 +6,6 @@ import { HttpClient } from '@angular/common/http';
 import Chart from 'chart.js/auto';
 import * as signalR from '@microsoft/signalr';
 
-// 🔥 ADDED ONLY THESE 2 IMPORTS
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -23,7 +22,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   noticeMessage = '';
   selectedGroup = 'All Users';
+
+  // 🔥 UPDATED (added usersList)
   groups = ['Admin', 'User', 'All Users'];
+  usersList: string[] = [];
 
   messages: any[] = [];
   currentUserEmail = '';
@@ -46,6 +48,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.loadMessages();
 
+    this.loadUsers(); // 🔥 NEW
+
     this.startSignalR();
 
     this.refreshInterval = setInterval(() => {
@@ -61,17 +65,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
     clearInterval(this.refreshInterval);
   }
 
-  // ================= SESSION CONTROL =================
+  // ================= LOAD USERS (NEW) =================
+
+loadUsers() {
+  this.http.get<string[]>('http://localhost:5000/api/users')
+    .subscribe(res => {
+
+      console.log("Users:", res);
+
+      this.usersList = res.filter(
+        email => email !== this.currentUserEmail
+      );
+
+    });
+}
+  // ================= SESSION =================
 
   checkSession() {
-
     const activeSession = localStorage.getItem('activeSession');
     const currentSession = sessionStorage.getItem('currentSession');
 
     if (activeSession !== currentSession) {
-
       alert('Logged out: another session detected');
-
       this.logout();
     }
   }
@@ -90,63 +105,53 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .catch(err => console.error('❌ SignalR Error:', err));
 
     this.hubConnection.on('ReceiveMessage', () => {
-      console.log('📩 Real-time update');
       this.loadMessages();
-    });
-
-    this.hubConnection.onclose(() => {
-      console.log('❌ SignalR Disconnected');
-    });
-
-    this.hubConnection.onreconnected(() => {
-      console.log('✅ SignalR Reconnected');
     });
   }
 
   // ================= LOAD MESSAGES =================
 
-loadMessages() {
-  this.http.get<any[]>('http://localhost:5000/api/chat/messages')
-    .subscribe(res => {
+  loadMessages() {
+    this.http.get<any[]>('http://localhost:5000/api/chat/messages')
+      .subscribe(res => {
 
-      this.messages = res.filter(m =>
-        m.senderEmail === this.currentUserEmail ||
-        m.receiverEmail === this.currentUserEmail
-      );
+        this.messages = res.filter(m =>
+          m.senderEmail === this.currentUserEmail ||
+          m.receiverEmail === this.currentUserEmail
+        );
 
-    });
-}
-
+      });
+  }
 
   // ================= SEND MESSAGE =================
 
- sendNotice() {
+  sendNotice() {
 
-  if (!this.noticeMessage.trim()) return;
+    if (!this.noticeMessage.trim()) return;
 
-  let receiver = this.selectedGroup.toLowerCase();
+    let receiver = this.selectedGroup;
 
-  // 🔥 FIX
-  if (receiver === 'user') receiver = 'users';
-  if (receiver === 'admin') receiver = 'admins';
+    // 🔥 FIX GROUP MAPPING
+    if (receiver === 'User') receiver = 'users';
+    else if (receiver === 'Admin') receiver = 'admins';
+    else if (receiver === 'All Users') receiver = 'all users';
+    // else → direct email (NO CHANGE)
 
-  const msg = {
-    senderEmail: this.currentUserEmail,
-    receiverEmail: receiver,
-    content: this.noticeMessage,
-    timestamp: new Date()
-  };
+    const msg = {
+      senderEmail: this.currentUserEmail,
+      receiverEmail: receiver,
+      content: this.noticeMessage,
+      timestamp: new Date()
+    };
 
-  this.http.post('http://localhost:5000/api/chat/send', msg)
-    .subscribe(() => {
-      this.noticeMessage = '';
-      this.loadMessages(); // 🔥 IMPORTANT
-    });
-}
+    this.http.post('http://localhost:5000/api/chat/send', msg)
+      .subscribe(() => {
+        this.noticeMessage = '';
+        this.loadMessages();
+      });
+  }
 
-
-
-  // ================= TAB SWITCH =================
+  // ================= TAB =================
 
   setTab(tab: string) {
     this.activeTab = tab;
@@ -158,6 +163,21 @@ loadMessages() {
       clearTimeout(this.timeoutHandle);
     }
   }
+  startSessionTimeout() {
+
+  clearTimeout(this.timeoutHandle);
+
+  this.timeoutHandle = setTimeout(() => {
+
+    if (this.activeTab === 'F') {
+
+      alert('Session expired (User Tab F)');
+      this.logout();
+
+    }
+
+  }, 20000); // 20 seconds
+}
 
   // ================= ANALYTICS =================
 
@@ -168,10 +188,7 @@ loadMessages() {
     ).length;
 
     const received = this.messages.filter(
-      m =>
-        m.receiverEmail === this.currentUserEmail ||
-        m.receiverEmail === 'users' ||
-        m.receiverEmail === 'all users'
+      m => m.receiverEmail === this.currentUserEmail
     ).length;
 
     const canvas = document.getElementById('userChart') as HTMLCanvasElement;
@@ -187,168 +204,62 @@ loadMessages() {
           data: [sent, received],
           backgroundColor: ['#3b82f6', '#f59e0b']
         }]
-      },
-      options: {
-        responsive: true,
-        cutout: '65%'
       }
     });
   }
 
-  // ================= SESSION TIMEOUT =================
+  // ================= PRINT =================
 
-  startSessionTimeout() {
+  printNotices() {
 
-    clearTimeout(this.timeoutHandle);
+    const content = document.getElementById('noticeBoard');
+    if (!content) return;
 
-    this.timeoutHandle = setTimeout(() => {
+    const printWindow = window.open('', '', 'width=900,height=700');
 
-      if (this.activeTab === 'F') {
+    printWindow?.document.write(`
+      <html>
+      <head>
+        <style>
+          .message-card { border:1px solid #000; margin:10px; padding:10px; }
+          .received { background:#f3e6b3; float:left; width:60%; }
+          .sent { background:#cfe2ff; float:right; width:60%; }
+        </style>
+      </head>
+      <body>
+        ${content.innerHTML}
+      </body>
+      </html>
+    `);
 
-        alert('Session expired (User Tab F)');
-        this.logout();
-      }
-
-    }, 20000);
+    printWindow?.document.close();
+    printWindow?.print();
   }
 
-  // ================= PRINT FUNCTION (NEW) =================
+  // ================= PDF =================
 
- printNotices() {
+  downloadPDF() {
 
-  const content = document.getElementById('noticeBoard');
-  if (!content) return;
+    const data = document.getElementById('noticeBoard');
+    if (!data) return;
 
-  const printWindow = window.open('', '', 'width=900,height=700');
+    html2canvas(data, { scale: 2 }).then(canvas => {
 
-  printWindow?.document.write(`
-    <html>
-    <head>
-      <title>Notice Board</title>
+      const imgWidth = 210;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
 
-      <style>
-        body {
-          font-family: Arial;
-          padding: 20px;
-          background: #fff;
-        }
+      const pdf = new jsPDF('p', 'mm', 'a4');
 
-        h2 {
-          text-align: center;
-          margin-bottom: 20px;
-          border-bottom: 2px solid #000;
-          padding-bottom: 10px;
-        }
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 10, imgWidth, imgHeight);
 
-        /* CHAT CONTAINER BORDER */
-        .chat-container {
-          border: 2px solid #000;
-          padding: 15px;
-          border-radius: 10px;
-        }
-
-        /* MESSAGE BOX */
-        .message-card {
-          padding: 10px;
-          margin: 10px;
-          border-radius: 10px;
-          width: 60%;
-          clear: both;
-          border: 1px solid #000; /* 🔥 BORDER ADDED */
-        }
-
-        /* RECEIVED (LEFT) */
-        .received {
-          background: #f3e6b3;
-          float: left;
-          text-align: left;
-        }
-
-        /* SENT (RIGHT) */
-        .sent {
-          background: #cfe2ff;
-          float: right;
-          text-align: right;
-        }
-
-        small {
-          font-size: 10px;
-          color: gray;
-        }
-
-        /* CLEAR FLOAT FIX */
-        .clearfix::after {
-          content: "";
-          display: block;
-          clear: both;
-        }
-
-      </style>
-
-    </head>
-
-    <body>
-
-      <h2>Notice Board</h2>
-
-      <div class="chat-container clearfix">
-        ${content.innerHTML}
-      </div>
-
-    </body>
-    </html>
-  `);
-
-  printWindow?.document.close();
-  printWindow?.print();
-}
-  // ================= PDF FUNCTION (NEW) =================
-
-downloadPDF() {
-
-  const data = document.getElementById('noticeBoard');
-  if (!data) return;
-
-  // 🔥 FIX SCROLL ISSUE
-  data.style.maxHeight = 'none';
-  data.style.overflow = 'visible';
-
-  html2canvas(data, {
-    scale: 2,
-    useCORS: true,
-    scrollY: -window.scrollY
-  }).then(canvas => {
-
-    const imgWidth = 210;
-    const pageHeight = 295;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    pdf.save('NoticeBoard.pdf');
-  });
-}
+      pdf.save('NoticeBoard.pdf');
+    });
+  }
 
   // ================= LOGOUT =================
 
   logout() {
-
     sessionStorage.clear();
-
     this.router.navigate(['/login']);
   }
 }

@@ -8,10 +8,7 @@ namespace LoginSignupAPI.Services
     {
         private readonly HttpClient _httpClient;
 
-        // CHANGE THESE IF DIFFERENT
-        private readonly string _dbUrl =
-            "http://localhost:5984/usersdb";
-
+        private readonly string _dbUrl = "http://localhost:5984/usersdb";
         private readonly string _username = "admin";
         private readonly string _password = "admin123";
 
@@ -19,41 +16,116 @@ namespace LoginSignupAPI.Services
         {
             _httpClient = httpClient;
 
-            var authToken =
-                Convert.ToBase64String(
-                    Encoding.ASCII.GetBytes(
-                        $"{_username}:{_password}"
-                    )
-                );
+            var authToken = Convert.ToBase64String(
+                Encoding.ASCII.GetBytes($"{_username}:{_password}")
+            );
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Basic", authToken);
         }
 
-
         // ================= CREATE USER =================
-
         public async Task<bool> CreateUserAsync(object user)
         {
-            var json =
-                JsonSerializer.Serialize(user);
+            var json = JsonSerializer.Serialize(user);
 
-            var content =
-                new StringContent(
-                    json,
-                    Encoding.UTF8,
-                    "application/json"
-                );
+            var content = new StringContent(
+                json,
+                Encoding.UTF8,
+                "application/json"
+            );
 
-            var response =
-                await _httpClient.PostAsync(_dbUrl, content);
+            var response = await _httpClient.PostAsync(_dbUrl, content);
 
             return response.IsSuccessStatusCode;
         }
 
+        // ================= GET ALL USERS (FIXED + DEBUG) =================
+        public async Task<List<JsonElement>> GetAllUsersAsync()
+        {
+            var response = await _httpClient.GetAsync(
+                $"{_dbUrl}/_all_docs?include_docs=true"
+            );
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"CouchDB error: {response.StatusCode}");
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine("🔥 RAW COUCH RESPONSE:");
+            Console.WriteLine(content);
+
+            var json = JsonDocument.Parse(content);
+
+            var rows = json.RootElement.GetProperty("rows");
+
+            var users = new List<JsonElement>();
+
+            foreach (var row in rows.EnumerateArray())
+            {
+                if (row.TryGetProperty("doc", out var doc))
+                {
+                    Console.WriteLine("👉 DOC FOUND:");
+                    Console.WriteLine(doc.ToString());
+
+                    // skip design docs
+                    if (doc.TryGetProperty("_id", out var idProp))
+                    {
+                        var id = idProp.GetString();
+
+                        if (!id.StartsWith("_design"))
+                        {
+                            users.Add(doc);
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("❌ NO DOC FOUND IN ROW");
+                }
+            }
+
+            Console.WriteLine($"✅ TOTAL USERS FOUND: {users.Count}");
+
+            return users;
+        }
+
+        // ================= GET ALL USER EMAILS =================
+        public async Task<List<string>> GetAllUserEmailsAsync()
+        {
+            var users = await GetAllUsersAsync();
+
+            var emails = new List<string>();
+
+            foreach (var user in users)
+            {
+                if (user.TryGetProperty("Email", out var e1))
+                {
+                    emails.Add(e1.GetString());
+                }
+                else if (user.TryGetProperty("email", out var e2))
+                {
+                    emails.Add(e2.GetString());
+                }
+                else
+                {
+                    Console.WriteLine("❌ EMAIL FIELD NOT FOUND IN USER:");
+                    Console.WriteLine(user.ToString());
+                }
+            }
+
+            Console.WriteLine("📧 EMAIL LIST:");
+            foreach (var email in emails)
+            {
+                Console.WriteLine(email);
+            }
+
+            return emails;
+        }
 
         // ================= GET USER BY EMAIL =================
-
         public async Task<JsonElement?> GetUserByEmailAsync(string email)
         {
             var users = await GetAllUsersAsync();
@@ -61,11 +133,16 @@ namespace LoginSignupAPI.Services
             foreach (var user in users)
             {
                 if (
-                    user.GetProperty("Email")
-                        .GetString()
-                        ?.ToLower()
-                    ==
-                    email.ToLower()
+                    user.TryGetProperty("Email", out var e1) &&
+                    e1.GetString()?.ToLower() == email.ToLower()
+                )
+                {
+                    return user;
+                }
+
+                if (
+                    user.TryGetProperty("email", out var e2) &&
+                    e2.GetString()?.ToLower() == email.ToLower()
                 )
                 {
                     return user;
@@ -75,78 +152,31 @@ namespace LoginSignupAPI.Services
             return null;
         }
 
-
-        // ================= GET ALL USERS =================
-
-        public async Task<List<JsonElement>> GetAllUsersAsync()
-        {
-            var response =
-                await _httpClient.GetAsync(
-                    $"{_dbUrl}/_all_docs?include_docs=true"
-                );
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception(
-                    $"CouchDB error: {response.StatusCode}"
-                );
-            }
-
-            var content =
-                await response.Content.ReadAsStringAsync();
-
-            var json =
-                JsonDocument.Parse(content);
-
-            var rows =
-                json.RootElement.GetProperty("rows");
-
-            return rows
-                .EnumerateArray()
-                .Select(r => r.GetProperty("doc"))
-                .ToList();
-        }
-
-
         // ================= UPDATE USER =================
-
-        public async Task<bool> UpdateUserAsync(
-            string id,
-            string rev,
-            object updatedUser
-        )
+        public async Task<bool> UpdateUserAsync(string id, string rev, object updatedUser)
         {
-            var json =
-                JsonSerializer.Serialize(updatedUser);
+            var json = JsonSerializer.Serialize(updatedUser);
 
-            var content =
-                new StringContent(
-                    json,
-                    Encoding.UTF8,
-                    "application/json"
-                );
+            var content = new StringContent(
+                json,
+                Encoding.UTF8,
+                "application/json"
+            );
 
-            var response =
-                await _httpClient.PutAsync(
-                    $"{_dbUrl}/{id}?rev={rev}",
-                    content
-                );
+            var response = await _httpClient.PutAsync(
+                $"{_dbUrl}/{id}?rev={rev}",
+                content
+            );
 
             return response.IsSuccessStatusCode;
         }
 
-
         // ================= DELETE USER =================
-
-        public async Task<bool> DeleteUserAsync(
-            string id,
-            string rev
-        )
+        public async Task<bool> DeleteUserAsync(string id, string rev)
         {
-            var response =
-                await _httpClient.DeleteAsync(
-                    $"{_dbUrl}/{id}?rev={rev}"
-                );
+            var response = await _httpClient.DeleteAsync(
+                $"{_dbUrl}/{id}?rev={rev}"
+            );
 
             return response.IsSuccessStatusCode;
         }

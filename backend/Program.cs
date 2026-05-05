@@ -4,7 +4,7 @@ using LoginSignupAPI.Hubs;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Services.AddHttpClient<CouchDbService>();
 // ================= LOGGING =================
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();

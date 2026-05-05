@@ -9,7 +9,7 @@
     <button (click)="setTab('C')" [class.active]="activeTab==='C'">Analytics</button>
   </div>
 
-  <!-- ================= TAB A ================= -->
+  <!-- TAB A -->
   <div *ngIf="activeTab === 'A'" class="card">
 
     <h3>Pending User Approvals</h3>
@@ -37,22 +37,31 @@
 
   </div>
 
-  <!-- ================= TAB B ================= -->
+  <!-- TAB B -->
   <div *ngIf="activeTab === 'B'" class="card">
 
     <h3>Send Notice</h3>
 
     <div class="input-area">
+
       <input
         type="text"
         [(ngModel)]="noticeMessage"
         placeholder="Enter message"
       >
 
+      <!-- ✅ UPDATED DROPDOWN -->
       <select [(ngModel)]="selectedReceiver">
+
         <option>All Users</option>
         <option>Admins</option>
         <option>Users</option>
+
+        <!-- 🔥 DIRECT USERS -->
+        <option *ngFor="let user of usersList">
+          {{user}}
+        </option>
+
       </select>
 
       <button (click)="sendNotice()">Send</button>
@@ -60,9 +69,7 @@
 
     <h3>Message History</h3>
 
-    <!-- ✅ SCROLLABLE TABLE -->
     <div class="table-container">
-
       <table>
         <tr>
           <th>Sender</th>
@@ -77,19 +84,16 @@
           <td>{{notice.content}}</td>
           <td>{{notice.timestamp}}</td>
         </tr>
-
       </table>
-
     </div>
 
   </div>
 
-  <!-- ================= TAB C ================= -->
+  <!-- TAB C -->
   <div *ngIf="activeTab === 'C'" class="card">
 
     <h3>Analytics Overview</h3>
 
-    <!-- ✅ STATS CARDS -->
     <div class="stats">
 
       <div class="stat-card blue">
@@ -109,7 +113,6 @@
 
     </div>
 
-    <!-- ✅ SMALL CHART -->
     <div class="chart-box">
       <canvas id="adminChart"></canvas>
     </div>
