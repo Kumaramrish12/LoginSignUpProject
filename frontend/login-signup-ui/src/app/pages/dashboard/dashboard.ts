@@ -105,63 +105,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // ================= LOAD MESSAGES =================
 
-  loadMessages() {
+loadMessages() {
+  this.http.get<any[]>('http://localhost:5000/api/chat/messages')
+    .subscribe(res => {
 
-    this.http.get<any[]>('http://localhost:5000/api/chat/messages')
-      .subscribe({
-        next: (res) => {
+      this.messages = res.filter(m =>
+        m.receiverEmail === this.currentUserEmail ||
+        m.senderEmail === this.currentUserEmail
+      );
 
-          this.messages = res.filter(m =>
-            m.receiverEmail === this.currentUserEmail ||
-            m.senderEmail === this.currentUserEmail ||
-            m.receiverEmail === 'users' ||
-            m.receiverEmail === 'admins' ||
-            m.receiverEmail === 'all users'
-          );
+    });
+}
 
-        },
-        error: (err) => {
-          console.error('❌ Load failed:', err);
-        }
-      });
-  }
+
 
   // ================= SEND MESSAGE =================
 
-  sendNotice() {
+ sendNotice() {
 
-    if (!this.noticeMessage.trim()) return;
+  if (!this.noticeMessage.trim()) return;
 
-    let receiver = this.selectedGroup.toLowerCase();
+  let receiver = this.selectedGroup.toLowerCase();
 
-    if (receiver === 'user') receiver = 'users';
-    if (receiver === 'admin') receiver = 'admins';
-    if (receiver === 'all users') receiver = 'all users';
+  // 🔥 FIX
+  if (receiver === 'user') receiver = 'users';
+  if (receiver === 'admin') receiver = 'admins';
 
-    const msg = {
-      senderEmail: this.currentUserEmail,
-      receiverEmail: receiver,
-      content: this.noticeMessage,
-      timestamp: new Date()
-    };
+  const msg = {
+    senderEmail: this.currentUserEmail,
+    receiverEmail: receiver,
+    content: this.noticeMessage,
+    timestamp: new Date()
+  };
 
-    console.log('📤 Sending:', msg);
+  this.http.post('http://localhost:5000/api/chat/send', msg)
+    .subscribe(() => {
+      this.noticeMessage = '';
+      this.loadMessages(); // 🔥 IMPORTANT
+    });
+}
 
-    this.http.post('http://localhost:5000/api/chat/send', msg)
-      .subscribe({
-        next: () => {
 
-          console.log('✅ Message Sent');
-
-          this.noticeMessage = '';
-
-          this.loadMessages();
-        },
-        error: (err) => {
-          console.error('❌ Send error:', err);
-        }
-      });
-  }
 
   // ================= TAB SWITCH =================
 

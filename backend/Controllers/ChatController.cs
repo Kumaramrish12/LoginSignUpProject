@@ -3,6 +3,7 @@ using LoginSignupAPI.Data;
 using LoginSignupAPI.Models;
 using Microsoft.AspNetCore.SignalR;
 using LoginSignupAPI.Hubs;
+using LoginSignupAPI.Services;
 
 namespace LoginSignupAPI.Controllers
 {
@@ -12,12 +13,17 @@ namespace LoginSignupAPI.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IHubContext<ChatHub> _hub;
+        private readonly CouchDbService _couch;
 
-        // ✅ Inject DB + SignalR Hub
-        public ChatController(AppDbContext context, IHubContext<ChatHub> hub)
+        public ChatController(
+            AppDbContext context,
+            IHubContext<ChatHub> hub,
+            CouchDbService couch
+        )
         {
             _context = context;
             _hub = hub;
+            _couch = couch;
         }
 
         // ================= SEND MESSAGE =================
@@ -27,9 +33,6 @@ namespace LoginSignupAPI.Controllers
         {
             try
             {
-                Console.WriteLine("🔥 API HIT");
-                Console.WriteLine("Receiver: " + message?.ReceiverEmail);
-
                 if (message == null)
                     return BadRequest("Invalid message");
 
@@ -38,17 +41,22 @@ namespace LoginSignupAPI.Controllers
 
                 var receiver = message.ReceiverEmail?.ToLower();
 
-                // ================= BROADCAST: USERS =================
+                // ================= ALL USERS =================
                 if (receiver == "all users" || receiver == "users")
                 {
-                    var users = _context.Users.ToList();
+                    var users = await _couch.GetAllUsersAsync();
 
                     foreach (var user in users)
                     {
+                        var email = user.GetProperty("Email").GetString();
+                        var approved = user.GetProperty("IsApproved").GetBoolean();
+
+                        if (!approved) continue;
+
                         var msg = new Message
                         {
                             SenderEmail = message.SenderEmail,
-                            ReceiverEmail = user.Email,
+                            ReceiverEmail = email,
                             Content = message.Content,
                             Timestamp = DateTime.UtcNow
                         };
@@ -57,28 +65,23 @@ namespace LoginSignupAPI.Controllers
                     }
                 }
 
-                // ================= BROADCAST: ADMINS =================
+                // ================= ADMIN =================
                 else if (receiver == "admins")
                 {
-                    var admins = _context.Users
-                        .Where(u => u.Role == "Admin")
-                        .ToList();
+                    var adminEmail = "admin@test.com"; // ✅ your only admin
 
-                    foreach (var admin in admins)
+                    var msg = new Message
                     {
-                        var msg = new Message
-                        {
-                            SenderEmail = message.SenderEmail,
-                            ReceiverEmail = admin.Email,
-                            Content = message.Content,
-                            Timestamp = DateTime.UtcNow
-                        };
+                        SenderEmail = message.SenderEmail,
+                        ReceiverEmail = adminEmail,
+                        Content = message.Content,
+                        Timestamp = DateTime.UtcNow
+                    };
 
-                        _context.Messages.Add(msg);
-                    }
+                    _context.Messages.Add(msg);
                 }
 
-                // ================= DIRECT MESSAGE =================
+                // ================= DIRECT =================
                 else
                 {
                     _context.Messages.Add(message);
@@ -86,7 +89,7 @@ namespace LoginSignupAPI.Controllers
 
                 await _context.SaveChangesAsync();
 
-                // 🔥🔥🔥 THIS WAS MISSING (REAL-TIME TRIGGER)
+                // 🔥 Optional real-time
                 await _hub.Clients.All.SendAsync("ReceiveMessage");
 
                 return Ok(new { success = true });
@@ -98,7 +101,7 @@ namespace LoginSignupAPI.Controllers
             }
         }
 
-        // ================= GET ALL MESSAGES =================
+        // ================= GET MESSAGES =================
 
         [HttpGet("messages")]
         public IActionResult GetMessages()
