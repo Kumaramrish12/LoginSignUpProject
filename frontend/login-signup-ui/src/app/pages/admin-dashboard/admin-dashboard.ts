@@ -126,7 +126,7 @@ export class AdminDashboardComponent implements OnInit {
     // else → direct email (NO CHANGE)
 
     const notice = {
-      senderEmail: this.currentUserEmail || 'admin@gmail.com',
+      senderEmail: 'admin@gmail.com',
       receiverEmail: receiver,
       content: this.noticeMessage
     };
