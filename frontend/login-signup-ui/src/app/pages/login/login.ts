@@ -50,7 +50,8 @@ export class LoginComponent {
           this.router.navigate(['/admin-dashboard']);
         else
           this.router.navigate(['/dashboard']);
-      },
+      }, 
+      // heyy
 
       error: err => {
         alert('Invalid credentials or approval pending');
