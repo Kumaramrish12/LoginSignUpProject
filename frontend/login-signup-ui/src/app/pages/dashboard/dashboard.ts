@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+
 import Chart from 'chart.js/auto';
 import * as signalR from '@microsoft/signalr';
 
@@ -16,7 +17,8 @@ import html2canvas from 'html2canvas';
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent
+implements OnInit, OnDestroy {
 
   activeTab = 'D';
 
@@ -24,66 +26,170 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectedGroup = 'All Users';
 
   groups = ['Admin', 'User', 'All Users'];
+
   usersList: string[] = [];
 
   messages: any[] = [];
+
   currentUserEmail = '';
 
   chart: any;
+
   timeoutHandle: any;
 
   hubConnection: signalR.HubConnection | null = null;
+
   refreshInterval: any;
 
-  constructor(private router: Router, private http: HttpClient) {}
+  constructor(
+    private router: Router,
+    private http: HttpClient
+  ) {}
 
   // ================= INIT =================
 
   ngOnInit() {
 
-    // ✅ FIX: use sessionStorage (NOT localStorage)
-    this.currentUserEmail = sessionStorage.getItem('email') || '';
+    // ✅ USER EMAIL
+    this.currentUserEmail =
+      sessionStorage.getItem('email') || '';
+
+    // ✅ JWT + SESSION VALIDATION
+    this.checkAuthentication();
 
     if (!this.currentUserEmail) {
+
       alert('Session expired. Please login again.');
+
       this.logout();
+
       return;
     }
 
-    // ✅ NEW SESSION FIX
+    // ✅ SESSION CONFLICT
     this.checkSessionConflict();
 
+    // ✅ LOAD DATA
     this.loadMessages();
+
     this.loadUsers();
+
     this.startSignalR();
 
-    this.refreshInterval = setInterval(() => {
-      this.loadMessages();
-    }, 3000);
+    // auto refresh
+    this.refreshInterval =
+      setInterval(() => {
+
+        this.loadMessages();
+
+      }, 3000);
   }
 
+  // ================= DESTROY =================
+
   ngOnDestroy() {
+
     if (this.hubConnection) {
+
       this.hubConnection.stop();
+
     }
+
     clearInterval(this.refreshInterval);
   }
 
-  // ================= SESSION FIX =================
+  // ================= AUTH CHECK =================
+
+  checkAuthentication() {
+
+    // ✅ JWT TOKEN CHECK
+    const token =
+      sessionStorage.getItem('token');
+
+    if (!token) {
+
+      alert('Token missing. Login again.');
+
+      this.logout();
+
+      return;
+    }
+
+    // ✅ EMAIL CHECK
+    const email =
+      sessionStorage.getItem('email');
+
+    if (!email) {
+
+      alert('Session expired.');
+
+      this.logout();
+
+      return;
+    }
+
+    // ✅ SESSION CHECK
+    const currentSession =
+      sessionStorage.getItem('currentSession');
+
+    const latestSession =
+      localStorage.getItem(
+        'session_' + email
+      );
+
+    if (currentSession !== latestSession) {
+
+      alert('Logged in from another tab');
+
+      this.logout();
+
+      return;
+    }
+
+    // ✅ FINGERPRINT CHECK
+    const savedFingerprint =
+      sessionStorage.getItem('fingerprint');
+
+    const currentFingerprint =
+      navigator.userAgent +
+      screen.width +
+      screen.height;
+
+    if (savedFingerprint !== currentFingerprint) {
+
+      alert('Session copied or invalid');
+
+      this.logout();
+
+      return;
+    }
+  }
+
+  // ================= SESSION CONFLICT =================
 
   checkSessionConflict() {
 
-    const email = sessionStorage.getItem('email');
-    const currentSession = sessionStorage.getItem('currentSession');
+    const email =
+      sessionStorage.getItem('email');
+
+    const currentSession =
+      sessionStorage.getItem('currentSession');
 
     window.addEventListener('storage', (event) => {
 
       if (event.key === 'session_' + email) {
 
-        const latestSession = localStorage.getItem('session_' + email);
+        const latestSession =
+          localStorage.getItem(
+            'session_' + email
+          );
 
         if (currentSession !== latestSession) {
-          alert('Session expired (opened in another tab)');
+
+          alert(
+            'Session expired (opened in another tab)'
+          );
+
           this.logout();
         }
       }
@@ -93,12 +199,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ================= LOAD USERS =================
 
   loadUsers() {
-    this.http.get<string[]>('http://localhost:5000/api/users')
+
+    this.http
+      .get<string[]>(
+        'http://localhost:5000/api/users'
+      )
       .subscribe(res => {
 
-        this.usersList = res.filter(
-          email => email !== this.currentUserEmail
-        );
+        this.usersList =
+          res.filter(
+            email =>
+              email !== this.currentUserEmail
+          );
 
       });
   }
@@ -107,30 +219,65 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   startSignalR() {
 
-    this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('http://localhost:5000/chatHub')
-      .withAutomaticReconnect([0, 2000, 5000, 10000])
+    this.hubConnection =
+      new signalR.HubConnectionBuilder()
+
+      .withUrl(
+        'http://localhost:5000/chatHub'
+      )
+
+      .withAutomaticReconnect([
+        0,
+        2000,
+        5000,
+        10000
+      ])
+
       .build();
 
     this.hubConnection.start()
-      .then(() => console.log('✅ SignalR Connected'))
-      .catch(err => console.error('❌ SignalR Error:', err));
 
-    this.hubConnection.on('ReceiveMessage', () => {
-      this.loadMessages();
-    });
+      .then(() =>
+        console.log('✅ SignalR Connected')
+      )
+
+      .catch(err =>
+        console.error(
+          '❌ SignalR Error:',
+          err
+        )
+      );
+
+    this.hubConnection.on(
+      'ReceiveMessage',
+      () => {
+
+        this.loadMessages();
+
+      }
+    );
   }
 
   // ================= LOAD MESSAGES =================
 
   loadMessages() {
-    this.http.get<any[]>('http://localhost:5000/api/chat/messages')
+
+    this.http
+      .get<any[]>(
+        'http://localhost:5000/api/chat/messages'
+      )
       .subscribe(res => {
 
-        this.messages = res.filter(m =>
-          m.senderEmail === this.currentUserEmail ||
-          m.receiverEmail === this.currentUserEmail
-        );
+        this.messages =
+          res.filter(m =>
+
+            m.senderEmail ===
+              this.currentUserEmail ||
+
+            m.receiverEmail ===
+              this.currentUserEmail
+
+          );
 
       });
   }
@@ -139,79 +286,146 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   sendNotice() {
 
-    if (!this.noticeMessage.trim()) return;
+    if (!this.noticeMessage.trim())
+      return;
 
-    let receiver = this.selectedGroup;
+    let receiver =
+      this.selectedGroup;
 
-    if (receiver === 'User') receiver = 'users';
-    else if (receiver === 'Admin') receiver = 'admins';
-    else if (receiver === 'All Users') receiver = 'all users';
+    if (receiver === 'User')
+      receiver = 'users';
+
+    else if (receiver === 'Admin')
+      receiver = 'admins';
+
+    else if (receiver === 'All Users')
+      receiver = 'all users';
 
     const msg = {
-      senderEmail: this.currentUserEmail,
-      receiverEmail: receiver,
-      content: this.noticeMessage,
-      timestamp: new Date()
+
+      senderEmail:
+        this.currentUserEmail,
+
+      receiverEmail:
+        receiver,
+
+      content:
+        this.noticeMessage,
+
+      timestamp:
+        new Date()
     };
 
-    this.http.post('http://localhost:5000/api/chat/send', msg)
+    this.http
+      .post(
+        'http://localhost:5000/api/chat/send',
+        msg
+      )
       .subscribe(() => {
+
         this.noticeMessage = '';
+
         this.loadMessages();
+
       });
   }
 
   // ================= TAB =================
 
   setTab(tab: string) {
+
     this.activeTab = tab;
 
     if (tab === 'F') {
+
       this.startSessionTimeout();
-      setTimeout(() => this.loadChart(), 300);
-    } else {
-      clearTimeout(this.timeoutHandle);
+
+      setTimeout(
+        () => this.loadChart(),
+        300
+      );
+
+    }
+    else {
+
+      clearTimeout(
+        this.timeoutHandle
+      );
+
     }
   }
+
+  // ================= SESSION TIMEOUT =================
 
   startSessionTimeout() {
 
     clearTimeout(this.timeoutHandle);
 
-    this.timeoutHandle = setTimeout(() => {
+    this.timeoutHandle =
+      setTimeout(() => {
 
-      if (this.activeTab === 'F') {
-        alert('Session expired (User Tab F)');
-        this.logout();
-      }
+        if (this.activeTab === 'F') {
 
-    }, 20000);
+          alert(
+            'Session expired (User Tab F)'
+          );
+
+          this.logout();
+        }
+
+      }, 20000);
   }
 
   // ================= ANALYTICS =================
 
   loadChart() {
 
-    const sent = this.messages.filter(
-      m => m.senderEmail === this.currentUserEmail
-    ).length;
+    const sent =
+      this.messages.filter(
+        m =>
+          m.senderEmail ===
+          this.currentUserEmail
+      ).length;
 
-    const received = this.messages.filter(
-      m => m.receiverEmail === this.currentUserEmail
-    ).length;
+    const received =
+      this.messages.filter(
+        m =>
+          m.receiverEmail ===
+          this.currentUserEmail
+      ).length;
 
-    const canvas = document.getElementById('userChart') as HTMLCanvasElement;
+    const canvas =
+      document.getElementById(
+        'userChart'
+      ) as HTMLCanvasElement;
+
     if (!canvas) return;
 
-    if (this.chart) this.chart.destroy();
+    if (this.chart)
+      this.chart.destroy();
 
     this.chart = new Chart(canvas, {
+
       type: 'doughnut',
+
       data: {
-        labels: ['Sent', 'Received'],
+
+        labels: [
+          'Sent',
+          'Received'
+        ],
+
         datasets: [{
-          data: [sent, received],
-          backgroundColor: ['#3b82f6', '#f59e0b']
+
+          data: [
+            sent,
+            received
+          ],
+
+          backgroundColor: [
+            '#3b82f6',
+            '#f59e0b'
+          ]
         }]
       }
     });
@@ -221,112 +435,191 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   printNotices() {
 
-    const content = document.getElementById('noticeBoard');
+    const content =
+      document.getElementById(
+        'noticeBoard'
+      );
+
     if (!content) return;
 
-    const printWindow = window.open('', '', 'width=900,height=700');
+    const printWindow =
+      window.open(
+        '',
+        '',
+        'width=900,height=700'
+      );
 
     printWindow?.document.write(`
+
       <html>
+
       <head>
+
         <style>
-          .message-card { border:1px solid #000; margin:10px; padding:10px; }
-          .received { background:#f3e6b3; float:left; width:60%; }
-          .sent { background:#cfe2ff; float:right; width:60%; }
+
+          .message-card {
+            border:1px solid #000;
+            margin:10px;
+            padding:10px;
+          }
+
+          .received {
+            background:#f3e6b3;
+            float:left;
+            width:60%;
+          }
+
+          .sent {
+            background:#cfe2ff;
+            float:right;
+            width:60%;
+          }
+
         </style>
+
       </head>
+
       <body>
+
         ${content.innerHTML}
+
       </body>
+
       </html>
+
     `);
 
     printWindow?.document.close();
+
     printWindow?.print();
   }
 
   // ================= PDF =================
-downloadPDF() {
 
-  console.log("🔥 PDF CLICKED");
+  downloadPDF() {
 
-  const data = document.getElementById('noticeBoard');
-  if (!data) {
-    console.error("❌ noticeBoard not found");
-    return;
-  }
+    const data =
+      document.getElementById(
+        'noticeBoard'
+      );
 
-  // ✅ FIX: since chat-container = same element
-  const scrollContainer = data as HTMLElement;
+    if (!data) return;
 
-  // store original styles
-  const originalMaxHeight = scrollContainer.style.maxHeight;
-  const originalOverflow = scrollContainer.style.overflow;
+    const scrollContainer =
+      data as HTMLElement;
 
-  // 🔥 REMOVE SCROLL LIMIT
-  scrollContainer.style.maxHeight = 'none';
-  scrollContainer.style.overflow = 'visible';
+    const originalMaxHeight =
+      scrollContainer.style.maxHeight;
 
-  html2canvas(data, {
-    scale: 2,
-    useCORS: true
-  }).then(canvas => {
+    const originalOverflow =
+      scrollContainer.style.overflow;
 
-    console.log("✅ CANVAS CREATED");
+    scrollContainer.style.maxHeight =
+      'none';
 
-    const imgWidth = 210;      // A4 width
-    const pageHeight = 295;    // A4 height
-    const imgHeight = canvas.height * imgWidth / canvas.width;
+    scrollContainer.style.overflow =
+      'visible';
 
-    const imgData = canvas.toDataURL('image/png');
+    html2canvas(data, {
 
-    const pdf = new jsPDF('p', 'mm', 'a4');
+      scale: 2,
 
-    let heightLeft = imgHeight;
-    let position = 0;
+      useCORS: true
 
-    // ✅ FIRST PAGE
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    }).then(canvas => {
 
-    // ✅ MULTIPLE PAGES
-    while (heightLeft > 0) {
+      const imgWidth = 210;
 
-      position = heightLeft - imgHeight;
+      const pageHeight = 295;
 
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      const imgHeight =
+        canvas.height *
+        imgWidth /
+        canvas.width;
+
+      const imgData =
+        canvas.toDataURL(
+          'image/png'
+        );
+
+      const pdf =
+        new jsPDF(
+          'p',
+          'mm',
+          'a4'
+        );
+
+      let heightLeft =
+        imgHeight;
+
+      let position = 0;
+
+      pdf.addImage(
+        imgData,
+        'PNG',
+        0,
+        position,
+        imgWidth,
+        imgHeight
+      );
 
       heightLeft -= pageHeight;
-    }
 
-    console.log("✅ PDF READY");
+      while (heightLeft > 0) {
 
-    // 🔥 FORCE DOWNLOAD (NO BLOCK)
-    const blob = pdf.output('blob');
-    const url = URL.createObjectURL(blob);
+        position =
+          heightLeft -
+          imgHeight;
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'NoticeBoard.pdf';
-    a.click();
+        pdf.addPage();
 
-    URL.revokeObjectURL(url);
+        pdf.addImage(
+          imgData,
+          'PNG',
+          0,
+          position,
+          imgWidth,
+          imgHeight
+        );
 
-    console.log("✅ PDF DOWNLOADED");
+        heightLeft -= pageHeight;
+      }
 
-    // ✅ RESTORE ORIGINAL UI
-    scrollContainer.style.maxHeight = originalMaxHeight;
-    scrollContainer.style.overflow = originalOverflow;
+      const blob =
+        pdf.output('blob');
 
-  }).catch(err => {
-    console.error("❌ PDF ERROR:", err);
-  });
-}
+      const url =
+        URL.createObjectURL(blob);
+
+      const a =
+        document.createElement('a');
+
+      a.href = url;
+
+      a.download =
+        'NoticeBoard.pdf';
+
+      a.click();
+
+      URL.revokeObjectURL(url);
+
+      scrollContainer.style.maxHeight =
+        originalMaxHeight;
+
+      scrollContainer.style.overflow =
+        originalOverflow;
+
+    });
+  }
+
   // ================= LOGOUT =================
 
   logout() {
+
     sessionStorage.clear();
-    this.router.navigate(['/login']);
+
+    this.router.navigate([
+      '/login'
+    ]);
   }
 }

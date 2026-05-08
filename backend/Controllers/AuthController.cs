@@ -2,6 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 using LoginSignupAPI.Services;
 using System.Text.Json;
 
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+
 namespace LoginSignupAPI.Controllers
 {
     [ApiController]
@@ -10,11 +16,17 @@ namespace LoginSignupAPI.Controllers
     {
         private readonly CouchDbService _couchDb;
 
-        public AuthController(CouchDbService couchDb)
+        // ✅ JWT CONFIG
+        private readonly IConfiguration _configuration;
+
+        public AuthController(
+            CouchDbService couchDb,
+            IConfiguration configuration
+        )
         {
             _couchDb = couchDb;
+            _configuration = configuration;
         }
-
 
         // ================= REGISTER =================
 
@@ -52,7 +64,6 @@ namespace LoginSignupAPI.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
-
 
         // ================= LOGIN =================
 
@@ -110,9 +121,61 @@ namespace LoginSignupAPI.Controllers
                         if (user.TryGetProperty("Role", out var roleProp))
                             role = roleProp.GetString();
 
+                        // ================= JWT TOKEN =================
+
+                        var claims = new[]
+                        {
+                            new Claim(ClaimTypes.Email, dbEmail),
+                            new Claim(ClaimTypes.Role, role)
+                        };
+
+                        var key =
+                            new SymmetricSecurityKey(
+                                Encoding.UTF8.GetBytes(
+                                    _configuration["Jwt:Key"]
+                                )
+                            );
+
+                        var creds =
+                            new SigningCredentials(
+                                key,
+                                SecurityAlgorithms.HmacSha256
+                            );
+
+                        // ✅ UNIQUE SESSION ID
+                        var sessionId =
+                            Guid.NewGuid().ToString();
+
+                        var token =
+                            new JwtSecurityToken(
+                                issuer:
+                                    _configuration["Jwt:Issuer"],
+
+                                audience:
+                                    _configuration["Jwt:Audience"],
+
+                                claims: claims,
+
+                                expires:
+                                    DateTime.Now.AddHours(2),
+
+                                signingCredentials: creds
+                            );
+
+                        var jwt =
+                            new JwtSecurityTokenHandler()
+                                .WriteToken(token);
+
+                        // ================= RESPONSE =================
+
                         return Ok(new
                         {
+                            token = jwt,
+
+                            sessionId = sessionId,
+
                             email = dbEmail,
+
                             role = role
                         });
                     }

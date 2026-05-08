@@ -2,12 +2,17 @@ import { Component } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+
 import { AuthService } from '../../core/services/auth';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, CommonModule, RouterModule],
+  imports: [
+    FormsModule,
+    CommonModule,
+    RouterModule
+  ],
   templateUrl: './login.html',
   styleUrls: ['./login.css']
 })
@@ -32,31 +37,82 @@ export class LoginComponent {
 
       next: (res: any) => {
 
-        // ✅ STORE USER PER TAB (IMPORTANT FIX)
-        sessionStorage.setItem('email', res.email);
-        sessionStorage.setItem('role', res.role);
+        // ================= JWT TOKEN =================
 
-        // ✅ SESSION CONTROL (PER USER)
-        const sessionId = Date.now().toString();
+        sessionStorage.setItem(
+          'token',
+          res.token
+        );
 
-        // store session per user (NOT global)
-        localStorage.setItem('session_' + res.email, sessionId);
+        // ================= USER DATA =================
 
-        // store session for this tab
-        sessionStorage.setItem('currentSession', sessionId);
+        sessionStorage.setItem(
+          'email',
+          res.email
+        );
 
-        // ✅ NAVIGATION
-        if (res.role === 'Admin')
-          this.router.navigate(['/admin-dashboard']);
-        else
-          this.router.navigate(['/dashboard']);
-      }, 
-      // heyy
+        sessionStorage.setItem(
+          'role',
+          res.role
+        );
+
+        // ================= SESSION SECURITY =================
+
+        // unique backend session
+        const sessionId = res.sessionId;
+
+        // store latest session for THIS USER only
+        localStorage.setItem(
+          'session_' + res.email,
+          sessionId
+        );
+
+        // store current tab session
+        sessionStorage.setItem(
+          'currentSession',
+          sessionId
+        );
+
+        // ================= COPY-PROTECTION =================
+
+        // browser fingerprint
+        const browserFingerprint =
+          navigator.userAgent +
+          screen.width +
+          screen.height;
+
+        sessionStorage.setItem(
+          'fingerprint',
+          browserFingerprint
+        );
+
+        // ================= NAVIGATION =================
+
+        if (res.role === 'Admin') {
+
+          this.router.navigate([
+            '/admin-dashboard'
+          ]);
+
+        }
+        else {
+
+          this.router.navigate([
+            '/dashboard'
+          ]);
+
+        }
+      },
 
       error: err => {
-        alert('Invalid credentials or approval pending');
+
+        alert(
+          'Invalid credentials or approval pending'
+        );
+
       }
 
     });
+
   }
 }

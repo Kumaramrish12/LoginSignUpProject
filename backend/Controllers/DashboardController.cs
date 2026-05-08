@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using LoginSignupAPI.Services;
 using System.Text.Json;
 
 namespace LoginSignupAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/dashboard")]
     public class DashboardController : ControllerBase

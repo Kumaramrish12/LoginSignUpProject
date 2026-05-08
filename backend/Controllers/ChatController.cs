@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using LoginSignupAPI.Data;
 using LoginSignupAPI.Models;
 using Microsoft.AspNetCore.SignalR;
@@ -7,6 +8,7 @@ using LoginSignupAPI.Services;
 
 namespace LoginSignupAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/chat")]
     public class ChatController : ControllerBase
