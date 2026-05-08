@@ -1,3 +1,4 @@
+using LoginSignupAPI.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -96,6 +97,9 @@ app.UseCors("AllowAngular");
 
 // ✅ IMPORTANT FOR JWT
 app.UseAuthentication();
+
+// ✅ SESSION VALIDATION
+app.UseMiddleware<SessionValidationMiddleware>();
 
 app.UseAuthorization();
 

@@ -31,140 +31,306 @@ namespace LoginSignupAPI.Controllers
         // ================= REGISTER =================
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] JsonElement user)
+        public async Task<IActionResult> Register(
+            [FromBody] JsonElement user
+        )
         {
             try
             {
-                if (user.ValueKind == JsonValueKind.Undefined)
-                    return BadRequest("Invalid request body");
+                if (
+                    user.ValueKind ==
+                    JsonValueKind.Undefined
+                )
+                    return BadRequest(
+                        "Invalid request body"
+                    );
 
                 var userDict =
-                    JsonSerializer.Deserialize<Dictionary<string, object>>(user);
+                    JsonSerializer.Deserialize
+                    <Dictionary<string, object>>(user);
 
                 if (userDict == null)
-                    return BadRequest("Invalid data");
+                    return BadRequest(
+                        "Invalid data"
+                    );
 
-                // Remove ConfirmPassword if Angular sends it
-                if (userDict.ContainsKey("ConfirmPassword"))
-                    userDict.Remove("ConfirmPassword");
+                // remove confirm password
+                if (
+                    userDict.ContainsKey(
+                        "ConfirmPassword"
+                    )
+                )
+                {
+                    userDict.Remove(
+                        "ConfirmPassword"
+                    );
+                }
 
-                // Always add approval flag
+                // approval flag
                 userDict["IsApproved"] = false;
 
                 var success =
-                    await _couchDb.CreateUserAsync(userDict);
+                    await _couchDb
+                    .CreateUserAsync(userDict);
 
                 if (!success)
-                    return StatusCode(500, "Registration failed");
+                {
+                    return StatusCode(
+                        500,
+                        "Registration failed"
+                    );
+                }
 
-                return Ok("Registration successful");
+                return Ok(
+                    "Registration successful"
+                );
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(
+                    500,
+                    ex.Message
+                );
             }
         }
 
         // ================= LOGIN =================
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] JsonElement request)
+        public async Task<IActionResult> Login(
+            [FromBody] JsonElement request
+        )
         {
             try
             {
                 string email = "";
                 string password = "";
+                string fingerprint = "";
 
-                // Accept email OR Email
-                if (request.TryGetProperty("email", out var emailLower))
-                    email = emailLower.GetString();
+                // ================= EMAIL =================
 
-                else if (request.TryGetProperty("Email", out var emailUpper))
-                    email = emailUpper.GetString();
+                if (
+                    request.TryGetProperty(
+                        "email",
+                        out var emailLower
+                    )
+                )
+                {
+                    email =
+                        emailLower.GetString() ?? "";
+                }
+                else if (
+                    request.TryGetProperty(
+                        "Email",
+                        out var emailUpper
+                    )
+                )
+                {
+                    email =
+                        emailUpper.GetString() ?? "";
+                }
 
-                // Accept Password OR password
-                if (request.TryGetProperty("Password", out var passUpper))
-                    password = passUpper.GetString();
+                // ================= PASSWORD =================
 
-                else if (request.TryGetProperty("password", out var passLower))
-                    password = passLower.GetString();
+                if (
+                    request.TryGetProperty(
+                        "Password",
+                        out var passUpper
+                    )
+                )
+                {
+                    password =
+                        passUpper.GetString() ?? "";
+                }
+                else if (
+                    request.TryGetProperty(
+                        "password",
+                        out var passLower
+                    )
+                )
+                {
+                    password =
+                        passLower.GetString() ?? "";
+                }
 
-                if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
-                    return BadRequest("Email or Password missing");
+                // ================= FINGERPRINT =================
+
+                if (
+                    request.TryGetProperty(
+                        "fingerprint",
+                        out var fpProp
+                    )
+                )
+                {
+                    fingerprint =
+                        fpProp.GetString() ?? "";
+                }
+
+                if (
+                    string.IsNullOrEmpty(email) ||
+                    string.IsNullOrEmpty(password)
+                )
+                {
+                    return BadRequest(
+                        "Email or Password missing"
+                    );
+                }
 
                 var users =
-                    await _couchDb.GetAllUsersAsync();
+                    await _couchDb
+                    .GetAllUsersAsync();
 
                 foreach (var user in users)
                 {
-                    if (!user.TryGetProperty("Email", out var dbEmailProp))
+                    if (
+                        !user.TryGetProperty(
+                            "Email",
+                            out var dbEmailProp
+                        )
+                    )
                         continue;
 
-                    if (!user.TryGetProperty("Password", out var dbPassProp))
+                    if (
+                        !user.TryGetProperty(
+                            "Password",
+                            out var dbPassProp
+                        )
+                    )
                         continue;
 
-                    var dbEmail = dbEmailProp.GetString();
-                    var dbPassword = dbPassProp.GetString();
+                    var dbEmail =
+                        dbEmailProp.GetString();
 
-                    if (dbEmail == email && dbPassword == password)
+                    var dbPassword =
+                        dbPassProp.GetString();
+
+                    if (
+                        dbEmail == email &&
+                        dbPassword == password
+                    )
                     {
                         bool approved = false;
 
-                        if (user.TryGetProperty("IsApproved", out var approvedProp))
-                            approved = approvedProp.GetBoolean();
+                        if (
+                            user.TryGetProperty(
+                                "IsApproved",
+                                out var approvedProp
+                            )
+                        )
+                        {
+                            approved =
+                                approvedProp.GetBoolean();
+                        }
 
                         if (!approved)
-                            return Unauthorized("Approval pending");
+                        {
+                            return Unauthorized(
+                                "Approval pending"
+                            );
+                        }
+
+                        // ================= ROLE =================
 
                         string role = "User";
 
-                        if (user.TryGetProperty("Role", out var roleProp))
-                            role = roleProp.GetString();
+                        if (
+                            user.TryGetProperty(
+                                "Role",
+                                out var roleProp
+                            )
+                        )
+                        {
+                            role =
+                                roleProp.GetString()
+                                ?? "User";
+                        }
 
-                        // ================= JWT TOKEN =================
+                        // ================= SESSION =================
+
+                        var sessionId =
+                            Guid.NewGuid()
+                            .ToString();
+
+                        // ✅ SAVE ACTIVE SESSION
+                        await _couchDb
+                        .UpdateActiveSessionAsync(
+                            dbEmail ?? "",
+                            sessionId
+                        );
+
+                        // ================= JWT CLAIMS =================
 
                         var claims = new[]
                         {
-                            new Claim(ClaimTypes.Email, dbEmail),
-                            new Claim(ClaimTypes.Role, role)
+                            new Claim(
+                                ClaimTypes.Email,
+                                dbEmail ?? ""
+                            ),
+
+                            new Claim(
+                                ClaimTypes.Role,
+                                role
+                            ),
+
+                            // ✅ SESSION CLAIM
+                            new Claim(
+                                "sessionId",
+                                sessionId
+                            ),
+
+                            // ✅ FINGERPRINT CLAIM
+                            new Claim(
+                                "fingerprint",
+                                fingerprint
+                            )
                         };
+
+                        // ================= JWT KEY =================
 
                         var key =
                             new SymmetricSecurityKey(
                                 Encoding.UTF8.GetBytes(
-                                    _configuration["Jwt:Key"]
+                                    _configuration[
+                                        "Jwt:Key"
+                                    ] ?? ""
                                 )
                             );
 
                         var creds =
                             new SigningCredentials(
                                 key,
-                                SecurityAlgorithms.HmacSha256
+                                SecurityAlgorithms
+                                .HmacSha256
                             );
 
-                        // ✅ UNIQUE SESSION ID
-                        var sessionId =
-                            Guid.NewGuid().ToString();
+                        // ================= JWT TOKEN =================
 
                         var token =
                             new JwtSecurityToken(
+
                                 issuer:
-                                    _configuration["Jwt:Issuer"],
+                                    _configuration[
+                                        "Jwt:Issuer"
+                                    ],
 
                                 audience:
-                                    _configuration["Jwt:Audience"],
+                                    _configuration[
+                                        "Jwt:Audience"
+                                    ],
 
                                 claims: claims,
 
                                 expires:
-                                    DateTime.Now.AddHours(2),
+                                    DateTime.Now
+                                    .AddHours(2),
 
-                                signingCredentials: creds
+                                signingCredentials:
+                                    creds
                             );
 
                         var jwt =
                             new JwtSecurityTokenHandler()
-                                .WriteToken(token);
+                            .WriteToken(token);
 
                         // ================= RESPONSE =================
 
@@ -181,11 +347,16 @@ namespace LoginSignupAPI.Controllers
                     }
                 }
 
-                return Unauthorized("Invalid credentials");
+                return Unauthorized(
+                    "Invalid credentials"
+                );
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(
+                    500,
+                    ex.Message
+                );
             }
         }
     }

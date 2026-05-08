@@ -28,9 +28,24 @@ export class LoginComponent {
 
   login() {
 
+    // ================= FINGERPRINT =================
+
+    const browserFingerprint =
+      navigator.userAgent +
+      screen.width +
+      screen.height +
+      navigator.language;
+
+    // ================= LOGIN BODY =================
+
     const body = {
+
       email: this.Email,
-      Password: this.Password
+
+      Password: this.Password,
+
+      // ✅ SEND TO BACKEND
+      fingerprint: browserFingerprint
     };
 
     this.authService.login(body).subscribe({
@@ -58,28 +73,22 @@ export class LoginComponent {
 
         // ================= SESSION SECURITY =================
 
-        // unique backend session
-        const sessionId = res.sessionId;
+        const sessionId =
+          res.sessionId;
 
-        // store latest session for THIS USER only
+        // latest active session for THIS USER
         localStorage.setItem(
           'session_' + res.email,
           sessionId
         );
 
-        // store current tab session
+        // current tab session
         sessionStorage.setItem(
           'currentSession',
           sessionId
         );
 
-        // ================= COPY-PROTECTION =================
-
-        // browser fingerprint
-        const browserFingerprint =
-          navigator.userAgent +
-          screen.width +
-          screen.height;
+        // ================= STORE FINGERPRINT =================
 
         sessionStorage.setItem(
           'fingerprint',

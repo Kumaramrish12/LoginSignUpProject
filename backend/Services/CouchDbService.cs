@@ -75,7 +75,8 @@ namespace LoginSignupAPI.Services
                     {
                         var id = idProp.GetString();
 
-                        if (!id.StartsWith("_design"))
+                        if (!string.IsNullOrEmpty(id) &&
+    !id.StartsWith("_design"))
                         {
                             users.Add(doc);
                         }
@@ -103,11 +104,15 @@ namespace LoginSignupAPI.Services
             {
                 if (user.TryGetProperty("Email", out var e1))
                 {
-                    emails.Add(e1.GetString());
+                    emails.Add(
+    e1.GetString() ?? ""
+);
                 }
                 else if (user.TryGetProperty("email", out var e2))
                 {
-                    emails.Add(e2.GetString());
+                    emails.Add(
+    e2.GetString() ?? ""
+);
                 }
                 else
                 {
@@ -180,5 +185,60 @@ namespace LoginSignupAPI.Services
 
             return response.IsSuccessStatusCode;
         }
+        // ================= UPDATE ACTIVE SESSION =================
+public async Task<bool> UpdateActiveSessionAsync(
+    string email,
+    string sessionId
+)
+{
+    var user = await GetUserByEmailAsync(email);
+
+    if (user == null)
+        return false;
+
+    var userDoc = user.Value;
+
+    // get _id
+string id =
+    userDoc.GetProperty("_id")
+    .GetString() ?? "";
+
+    // get _rev
+   string rev =
+    userDoc.GetProperty("_rev")
+    .GetString() ?? "";
+
+    // convert user to dictionary
+    var updatedUser =
+        JsonSerializer.Deserialize
+        <Dictionary<string, object>>(
+            userDoc.ToString()
+        );
+
+    // update session
+    if (updatedUser == null)
+    return false;
+    updatedUser["ActiveSessionId"] =
+        sessionId;
+
+    var json =
+        JsonSerializer.Serialize(updatedUser);
+
+    var content = new StringContent(
+        json,
+        Encoding.UTF8,
+        "application/json"
+    );
+
+    var response =
+        await _httpClient.PutAsync(
+            $"{_dbUrl}/{id}?rev={rev}",
+            content
+        );
+
+    return response.IsSuccessStatusCode;
+}
     }
+
+    
 }

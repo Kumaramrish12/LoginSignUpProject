@@ -127,43 +127,10 @@ implements OnInit, OnDestroy {
 
       return;
     }
-
-    // ✅ SESSION CHECK
-    const currentSession =
-      sessionStorage.getItem('currentSession');
-
-    const latestSession =
-      localStorage.getItem(
-        'session_' + email
-      );
-
-    if (currentSession !== latestSession) {
-
-      alert('Logged in from another tab');
-
-      this.logout();
-
-      return;
-    }
-
-    // ✅ FINGERPRINT CHECK
-    const savedFingerprint =
-      sessionStorage.getItem('fingerprint');
-
-    const currentFingerprint =
-      navigator.userAgent +
-      screen.width +
-      screen.height;
-
-    if (savedFingerprint !== currentFingerprint) {
-
-      alert('Session copied or invalid');
-
-      this.logout();
-
-      return;
-    }
   }
+
+
+
 
   // ================= SESSION CONFLICT =================
 
